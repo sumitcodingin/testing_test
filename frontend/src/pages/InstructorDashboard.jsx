@@ -5,7 +5,9 @@ import InstructorFeedback from "./instructor/InstructorFeedback";
 import InstructorGrading from "./instructor/InstructorGrading";
 import AcademicEvents from "./student/AcademicEvents";
 import AllCourses from "./instructor/AllCourses";
-import InstructorProfile from "./instructor/InstructorProfile"; // ✅ NEW IMPORT
+import InstructorProfile from "./instructor/InstructorProfile";
+import InstructorProjects from "./instructor/InstructorProjects";
+import Timetable from "./instructor/Timetable";
 
 export default function InstructorDashboard() {
   const [activeTab, setActiveTab] = useState("approvals");
@@ -18,9 +20,7 @@ export default function InstructorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ================= SIDEBAR ================= */}
       <nav className="fixed top-0 left-0 h-screen w-64 bg-neutral-900 text-neutral-200 shadow-lg flex flex-col justify-between">
-        {/* TOP */}
         <div>
           <h1 className="text-lg font-semibold px-6 py-5 border-b border-neutral-700 tracking-wide">
             Instructor Portal
@@ -46,6 +46,20 @@ export default function InstructorDashboard() {
               onClick={() => setActiveTab("float")}
             >
               Float Course
+            </NavBtn>
+
+            <NavBtn
+              active={activeTab === "projects"}
+              onClick={() => setActiveTab("projects")}
+            >
+              Research Projects
+            </NavBtn>
+
+            <NavBtn
+              active={activeTab === "timetable"}
+              onClick={() => setActiveTab("timetable")}
+            >
+              Timetable
             </NavBtn>
 
             <NavBtn
@@ -78,7 +92,6 @@ export default function InstructorDashboard() {
           </div>
         </div>
 
-        {/* BOTTOM */}
         <div className="px-6 py-4 border-t border-neutral-700">
           <p className="text-sm text-neutral-400 mb-3">
             {user?.name || "Instructor"}
@@ -93,7 +106,6 @@ export default function InstructorDashboard() {
         </div>
       </nav>
 
-      {/* ================= MAIN CONTENT ================= */}
       <main className="ml-64 p-6 min-h-screen overflow-y-auto">
         {activeTab === "approvals" && <InstructorApprovals />}
 
@@ -103,20 +115,21 @@ export default function InstructorDashboard() {
           <FloatCourse onSuccess={() => setActiveTab("approvals")} />
         )}
 
+        {activeTab === "projects" && <InstructorProjects />}
+
+        {activeTab === "timetable" && <Timetable />}
+
         {activeTab === "feedback" && <InstructorFeedback />}
 
         {activeTab === "grading" && <InstructorGrading />}
 
         {activeTab === "academic-events" && <AcademicEvents />}
 
-        {/* ✅ DOCUMENT-STYLE PROFILE */}
         {activeTab === "profile" && <InstructorProfile />}
       </main>
     </div>
   );
 }
-
-/* ================= HELPERS ================= */
 
 function NavBtn({ active, children, ...props }) {
   return (

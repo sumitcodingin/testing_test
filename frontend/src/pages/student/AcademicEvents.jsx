@@ -1,3 +1,5 @@
+import iitLogo from "../../assets/images/iit_ropar_logo.jpg";
+
 export default function AcademicEvents() {
   const handleDownload = () => {
     window.location.href = "/academic-calendar-2026.pdf";
@@ -5,24 +7,17 @@ export default function AcademicEvents() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      {/* ================= HEADER ================= */}
       <div className="relative mb-4">
-        {/* DOWNLOAD BUTTON */}
         <button
           onClick={handleDownload}
-          className="
-            absolute right-0 top-0
-            bg-gray-800 text-white
-            text-sm
-            px-4 py-1.5
-            rounded
-            border border-gray-700
-            hover:bg-gray-700
-            transition
-          "
+          className="absolute right-0 top-0 bg-gray-800 text-white text-sm px-4 py-1.5 rounded border border-gray-700 hover:bg-gray-700 transition"
         >
           Download PDF
         </button>
+
+        <div className="flex justify-center mb-3">
+          <img src={iitLogo} alt="IIT Ropar Logo" className="h-20" />
+        </div>
 
         <h1 className="text-xl font-bold text-center mb-1">
           INDIAN INSTITUTE OF TECHNOLOGY ROPAR
@@ -33,7 +28,6 @@ export default function AcademicEvents() {
         </h2>
       </div>
 
-      {/* ================= TABLE 1 ================= */}
       <div className="overflow-x-auto bg-white shadow rounded mb-8">
         <table className="min-w-full border border-black text-sm">
           <thead>
@@ -56,10 +50,7 @@ export default function AcademicEvents() {
               <td className="border border-black p-2 align-top">
                 Reporting & Registration of new PG/Ph.D/UG students
               </td>
-              <td
-                className="border border-black p-2 align-top"
-                rowSpan={3}
-              >
+              <td className="border border-black p-2 align-top" rowSpan={3}>
                 <strong>For new PG / Ph.D / UG students</strong>
                 <br />
                 July 3rd week or 4th week – dates will be notified later.
@@ -207,16 +198,77 @@ export default function AcademicEvents() {
         </table>
       </div>
 
-      {/* ================= IMPORTANT NOTE ================= */}
       <div className="bg-white shadow rounded p-4 text-sm">
         <h3 className="font-bold mb-2">Important Note:</h3>
-        {/* (rest unchanged) */}
+
+        <p className="text-center font-semibold mb-2">
+          (2nd semester of AY 2025-26)
+        </p>
+
+        <ol className="list-decimal pl-5 space-y-2">
+          <li>February 06 (Friday) is no class day (Student Activity).</li>
+          <li>Feb 24 (Tue) is Foundation day (study leave).</li>
+          <li>Jan 31 (Sat) work as per Friday Timetable.</li>
+          <li>March 13 (Friday) is no class day (Student Activity).</li>
+          <li>March 20 (Friday) is no class day (Student Activity).</li>
+          <li>March 23 (Monday) work as per Tuesday Timetable.</li>
+          <li>April 08 (Wed) work as per Friday Timetable.</li>
+          <li>April 23 (Thu) work as per Friday Timetable.</li>
+          <li>
+            The grades submission portal will open on{" "}
+            <strong>May 04 (Mon)</strong>. The grades moderation should be
+            before <strong>May 19 (Mon)</strong>. Comprehensive VIVA exam for
+            4th year UG Student can be held as per department decision.
+          </li>
+        </ol>
+
+        <p className="text-center font-semibold mt-4 mb-2">
+          (1st semester of AY 2026-27)
+        </p>
+
+        <ol start={10} className="list-decimal pl-5 space-y-2">
+          <li>August 13 (Thursday) work as per Wednesday Timetable.</li>
+          <li>October 08 (Thursday) work as per Friday Timetable.</li>
+          <li>October 09 (Friday) is no class day (Student Activity).</li>
+          <li>October 21 (Wednesday) work as per Tuesday Timetable.</li>
+          <li>
+            The grades submission portal will open on{" "}
+            <strong>Nov 16 (Monday)</strong>. The grades moderation should be
+            done before <strong>Dec 02 (Wednesday)</strong>.
+          </li>
+        </ol>
+
+        <p className="mt-4">
+          In event of changes in date(s) of holiday(s) announced by the
+          Government of India through the media (AIR/TV/Newspaper, etc) then
+          the Institute shall automatically observe the subject holiday(s)
+          accordingly and a Saturday will work as per the timetable followed
+          on the working day in lieu of that day.
+        </p>
+
+        <p className="font-bold mt-4">
+          SENATE meeting will be held during an academic year :
+        </p>
+        <ol className="list-decimal pl-5 space-y-1">
+          <li>Before Convocation (June / July)</li>
+          <li>End of Semester I (December / January)</li>
+          <li>End of Semester II (May / June)</li>
+          <li>End of Summer Semester (July/ August)</li>
+        </ol>
+
+        <p className="font-semibold mt-4">
+          Schedule for 2nd semester of AY 2026-27 (Tentative)
+        </p>
+        <p className="mt-2">
+          Registration of continuing students – Jan 01 & Jan 02, 2027 (Friday &
+          Saturday)
+        </p>
+        <p>Commencement of classes – Jan 04, 2027 (Monday)</p>
       </div>
     </div>
   );
 }
 
-/* ================= ROW COMPONENT ================= */
 function Tr({ left, event, right, bold }) {
   return (
     <tr className={bold ? "font-bold" : ""}>

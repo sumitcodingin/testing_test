@@ -340,7 +340,7 @@ function CourseTable({ courses, onSelect }) {
               <td className="p-3 text-center">
                 <button
                   onClick={() => onSelect(c)}
-                  className="px-6 py-1.5 border-2 border-black text-black text-xs font-bold hover:bg-black hover:text-white uppercase transition-all"
+                  className="px-6 py-1.5 border-2 text-black text-xs font-bold hover:bg-black hover:text-white uppercase transition-all"
                 >
                   Select
                 </button>
