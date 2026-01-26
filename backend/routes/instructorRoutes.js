@@ -5,11 +5,12 @@ const {
   getCourseApplications, 
   approveByInstructor, 
   awardGrade, 
-  floatCourse, // ✅ IMPORTED
+  floatCourse, 
   getInstructorFeedback,
   getEnrolledStudentsForCourse,
   validateGradesCSV,
-  submitMassGrades
+  submitMassGrades,
+  sendCourseEmail // ✅ IMPORTED
 } = require('../controllers/instructorController');
 
 // 1. Get Courses & Applications
@@ -30,5 +31,8 @@ router.post('/submit-mass-grades', submitMassGrades);
 // 5. Feedback & Utils
 router.get('/feedback', getInstructorFeedback);
 router.get('/course-students/:course_id', getEnrolledStudentsForCourse);
+
+// 6. Email Communication (✅ ROUTE ADDED)
+router.post('/send-course-email', sendCourseEmail);
 
 module.exports = router;
