@@ -1,6 +1,7 @@
 /* file: backend/controllers/instructorController.js */
 const supabase = require("../supabaseClient");
 const { sendStatusEmail } = require("../utils/mailer");
+const { sendCustomEmail } = require("../utils/sendCustomEmail"); // ✅ Import sendCustomEmail
 
 /* ===================================================
    Helper: Update Course Enrolled Count
@@ -117,7 +118,6 @@ const getCourseApplications = async (req, res) => {
       `,
       )
       .eq("course_id", course_id)
-      // FIX: Added 'ADVISOR_REJECTED' to the list
       .in("status", ["PENDING_INSTRUCTOR_APPROVAL", "ENROLLED", "PENDING_ADVISOR_APPROVAL", "ADVISOR_REJECTED"]);
 
     if (error) throw error;
@@ -128,12 +128,13 @@ const getCourseApplications = async (req, res) => {
   }
 };
 
+// ===================================================
 // 3. Approve / Reject / Remove Student
+// ===================================================
 const approveByInstructor = async (req, res) => {
   const { enrollmentId, action, instructor_id } = req.body;
 
   try {
-    // FIX: Use explicit foreign key constraint to prevent "Could not find relationship" error
     const { data: enrollment, error } = await supabase
       .from("enrollments")
       .select(`
@@ -154,7 +155,6 @@ const approveByInstructor = async (req, res) => {
       return res.status(404).json({ error: "Enrollment not found." });
     }
 
-    // FIX: Robust check for Coordinator ID (String vs Number)
     if (String(enrollment.course.coordinator_id) !== String(instructor_id)) {
       return res.status(403).json({ error: "Only the Course Coordinator can approve students." });
     }
@@ -187,13 +187,10 @@ const approveByInstructor = async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Update count if removing an enrolled student
     if (wasEnrolled) {
-       // Helper function assumed to be in this file as per previous uploads
        await updateCourseEnrolledCount(enrollment.course_id); 
     }
 
-    // Send email notification (Fail-safe)
     if (enrollment.student && enrollment.course) {
       try {
         await sendStatusEmail(enrollment.student.email, enrollment.student.full_name, enrollment.course.title, newStatus);
@@ -207,15 +204,13 @@ const approveByInstructor = async (req, res) => {
   }
 };
 
-// ... export the function
 // ===================================================
-// 4. Award Grade (WITH CHECK - COORDINATOR ONLY)
+// 4. Award Grade
 // ===================================================
 const awardGrade = async (req, res) => {
   const { enrollmentId, grade, instructor_id } = req.body;
 
   try {
-    // 0. CHECK WINDOW
     const isOpen = await checkGradingOpen();
     if (!isOpen) {
       return res
@@ -243,7 +238,6 @@ const awardGrade = async (req, res) => {
     if (courseError || !course)
       return res.status(404).json({ error: "Course not found." });
 
-    // Only coordinator can award grades
     if (String(course.coordinator_id) !== String(instructor_id)) return res.status(403).json({ error: "Only course coordinator can award grades." });
     if (enrollment.status !== "ENROLLED") return res.status(400).json({ error: "Student must be enrolled." });
 
@@ -261,17 +255,15 @@ const awardGrade = async (req, res) => {
 };
 
 // ===================================================
-// 5. Float a Course (FIXED DUPLICATE IDs)
+// 5. Float a Course
 // ===================================================
 const floatCourse = async (req, res) => {
   const { course_code, title, department, acad_session, credits, capacity, slot, instructor_id, coordinator_id, co_instructors } = req.body;
 
   try {
-    // Basic validation
     if (!slot) return res.status(400).json({ error: "Course slot is required." });
     if (!coordinator_id) return res.status(400).json({ error: "Course coordinator is required." });
 
-    // Check for duplicate slot
     const { data: existingSlotCourses, error: slotError } = await supabase
       .from("courses")
       .select("course_id")
@@ -295,20 +287,12 @@ const floatCourse = async (req, res) => {
     
     const advisorIdToUse = instructorUser.advisor_id || null;
 
-    // --- FIX STARTS HERE ---
-    // Use a Set to ensure all IDs are unique Numbers
     const uniqueIds = new Set();
-
-    // 1. Always add Coordinator ID
     uniqueIds.add(Number(coordinator_id));
-
-    // 2. Add Co-Instructors (converting all to Number to prevent "101" vs 101 duplicates)
     if (Array.isArray(co_instructors)) {
       co_instructors.forEach(id => uniqueIds.add(Number(id)));
     }
-
     const teachingInstructors = Array.from(uniqueIds);
-    // --- FIX ENDS HERE ---
 
     const { error } = await supabase.from("courses").insert([
       {
@@ -320,7 +304,7 @@ const floatCourse = async (req, res) => {
         capacity, 
         slot,
         coordinator_id: coordinator_id,
-        co_instructors: teachingInstructors, // Now guaranteed unique
+        co_instructors: teachingInstructors, 
         advisor_id: advisorIdToUse,
         status: "PENDING_ADMIN_APPROVAL",
         enrolled_count: 0,
@@ -362,7 +346,7 @@ const getInstructorFeedback = async (req, res) => {
 };
 
 // ===================================================
-// 7. Get Enrolled Students for CSV Download (COORDINATOR ONLY)
+// 7. Get Enrolled Students for CSV Download
 // ===================================================
 const getEnrolledStudentsForCourse = async (req, res) => {
   const { course_id } = req.params;
@@ -371,7 +355,6 @@ const getEnrolledStudentsForCourse = async (req, res) => {
     const { data: course, error: courseError } = await supabase.from("courses").select("coordinator_id, co_instructors").eq("course_id", course_id).single();
     if (courseError || !course) return res.status(404).json({ error: "Course not found." });
     
-    // Only coordinator and co-instructors can view enrolled students
     if (String(course.coordinator_id) !== String(instructor_id) && 
         !(course.co_instructors && course.co_instructors.includes(String(instructor_id)))) {
       return res.status(403).json({ error: "Unauthorized." });
@@ -395,7 +378,7 @@ const getEnrolledStudentsForCourse = async (req, res) => {
 };
 
 // ===================================================
-// 8. Validate Grades CSV (COORDINATOR ONLY)
+// 8. Validate Grades CSV
 // ===================================================
 const validateGradesCSV = async (req, res) => {
   const { course_id, instructor_id, data, valid_grades } = req.body;
@@ -403,7 +386,6 @@ const validateGradesCSV = async (req, res) => {
     const { data: course, error: courseError } = await supabase.from("courses").select("course_id, coordinator_id").eq("course_id", course_id).single();
     if (courseError || !course) return res.status(404).json({ error: "Course not found." });
     
-    // Only coordinator can validate grades
     if (String(course.coordinator_id) !== String(instructor_id)) return res.status(403).json({ error: "Only course coordinator can submit grades." });
 
     const { data: enrollments, error: enrollError } = await supabase
@@ -464,13 +446,12 @@ const validateGradesCSV = async (req, res) => {
 };
 
 // ===================================================
-// 9. Submit Mass Grades (WITH CHECK - COORDINATOR ONLY)
+// 9. Submit Mass Grades
 // ===================================================
 const submitMassGrades = async (req, res) => {
   const { course_id, instructor_id, grades } = req.body;
 
   try {
-    // 0. CHECK WINDOW
     const isOpen = await checkGradingOpen();
     if (!isOpen) {
       return res
@@ -481,7 +462,6 @@ const submitMassGrades = async (req, res) => {
     const { data: course, error: courseError } = await supabase.from("courses").select("course_id, coordinator_id").eq("course_id", course_id).single();
     if (courseError || !course) return res.status(404).json({ error: "Course not found." });
     
-    // Only coordinator can submit grades
     if (String(course.coordinator_id) !== String(instructor_id)) return res.status(403).json({ error: "Only course coordinator can submit grades." });
 
     const updatePromises = grades.map((g) =>
@@ -506,6 +486,83 @@ const submitMassGrades = async (req, res) => {
   }
 };
 
+// ===================================================
+// 10. Send Email to Class (✅ CORRECTED: Students in TO)
+// ===================================================
+const sendCourseEmail = async (req, res) => {
+  const { course_id, instructor_id, subject, message } = req.body;
+
+  try {
+    if (!subject || !message) return res.status(400).json({ error: "Subject and message are required." });
+
+    // 1. Fetch Instructor Info (To set as Sender & Reply-To)
+    const { data: instructor, error: instError } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("user_id", instructor_id)
+      .single();
+
+    if (instError || !instructor) return res.status(404).json({ error: "Instructor not found." });
+
+    // 2. Fetch Course & Check Permission
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("course_id, title, course_code, coordinator_id, co_instructors")
+      .eq("course_id", course_id)
+      .single();
+
+    if (courseError || !course) return res.status(404).json({ error: "Course not found." });
+
+    const isCoordinator = String(course.coordinator_id) === String(instructor_id);
+    const isCoInstructor = course.co_instructors && course.co_instructors.includes(String(instructor_id));
+
+    if (!isCoordinator && !isCoInstructor) {
+      return res.status(403).json({ error: "Unauthorized to send emails for this course." });
+    }
+
+    // 3. Fetch Enrolled Students
+    const { data: enrollments, error: enrollError } = await supabase
+      .from("enrollments")
+      .select(`
+        student_id, 
+        users!inner ( email )
+      `)
+      .eq("course_id", course_id)
+      .eq("status", "ENROLLED");
+
+    if (enrollError) throw enrollError;
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(400).json({ error: "No enrolled students in this course." });
+    }
+
+    // 4. Extract Emails
+    const studentEmails = enrollments.map(e => e.users.email).filter(Boolean);
+
+    // 5. Construct Email
+    // ✅ "From" Display Name is Instructor
+    const fromIdentity = `"${instructor.full_name}" <${process.env.EMAIL_USER}>`;
+    
+    const emailSubject = `[${course.course_code}] ${subject}`;
+    const emailFooter = `\n\n--\n${instructor.full_name}\n${instructor.email}\nSent via Instructor Portal\nCourse: ${course.title}`;
+
+    await sendCustomEmail({
+      from: fromIdentity,           // Display: "Dr. Name <system@email.com>"
+      replyTo: instructor.email,    // Replies go to Dr. Name
+      to: studentEmails,            // ✅ STUDENTS IN "TO" FIELD (Array of strings)
+      cc: [instructor.email],       // ✅ INSTRUCTOR IN "CC" (To confirm sending)
+      subject: emailSubject,
+      text: message + emailFooter,
+    });
+
+    res.status(200).json({ message: `Email sent to ${studentEmails.length} students.` });
+
+  } catch (err) {
+    console.error("SEND COURSE EMAIL ERROR:", err);
+    res.status(500).json({ error: "Failed to send email." });
+  }
+};
+
 module.exports = {
   getInstructorCourses,
   getCourseApplications,
@@ -516,4 +573,5 @@ module.exports = {
   getEnrolledStudentsForCourse,
   validateGradesCSV,
   submitMassGrades,
+  sendCourseEmail // ✅ Exported
 };
