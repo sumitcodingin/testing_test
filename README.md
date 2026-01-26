@@ -68,12 +68,65 @@ An institutional-grade platform designed to digitize and automate complex academ
 
 ---
 
+## 📂 Project Structure
+
+```text
+├── backend
+│   ├── config/             # Supabase & Email Transporter settings
+│   ├── controllers/        # Logic for Academic, Project, and Admin flows
+│   ├── middleware/         # Session validation (authSession.js)
+│   ├── routes/             # API Endpoints
+│   ├── utils/              # Emailer & CSV Validation utilities
+│   ├── server.js           # Express server with DNS optimization
+│   └── supabaseClient.js   # Database connection
+└── frontend
+    └── src
+        ├── components/     # ProtectedRoute, UI Wrappers
+        ├── pages/          # Dashboards (Student, Instructor, Advisor, Admin)
+        ├── services/       # Axios API configurations
+        └── assets/         # Institutional logos and images
+```
+
 ## 🛠️ Setup & Installation
 
-1.  **Dependencies**: Run `npm install` in both `backend` and `frontend` folders.
-2.  **Environment**: Configure `.env` in the `backend` folder with:
-    * `SUPABASE_URL`, `SUPABASE_KEY`
-    * `EMAIL_USER`, `EMAIL_PASS` (Gmail App Password)
-3.  **Deployment**:
-    * **Backend**: `node server.js`
-    * **Frontend**: `npm start`
+### 1. Prerequisites
+* Node.js (v16+)
+* Supabase Account & Project
+
+### 2. Environment Variables
+Create a `.env` file in the `backend/` directory:
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_anon_key
+EMAIL_USER=your_institute_email@iitrpr.ac.in
+EMAIL_PASS=your_app_password
+```
+
+### 3. Installation
+
+```bash
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+### 4. Running the Application
+
+```bash
+# Start the backend (from /backend)
+node server.js
+
+# Start the frontend (from /frontend)
+npm start
+```
+
+## 👥 Team Members
+
+* **Shaurya Anant** - 2023CSB1313
+* **Venkata Praneeth J** - 2023CSB1296
+* **Sumit Sharma** - 2023CSB1165
+* **Aryan Sodhi** - 2023CSB1288
