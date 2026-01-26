@@ -13,7 +13,8 @@ router.get('/my-instructor-courses', advisorController.getAdvisorInstructorCours
 // Student Approval Routes
 router.get('/student-courses', advisorController.getAdvisorStudentCourses); 
 router.get('/course-students', advisorController.getAdvisorStudentsForCourse); 
-router.post('/approve-student', advisorController.approveByAdvisor); 
+router.post('/approve-student', advisorController.approveByAdvisor);
+router.post('/bulk-approve-student', advisorController.bulkApproveByAdvisor); // ✅ NEW ROUTE
 
 // Student Management Routes
 router.get("/all-students", advisorController.getAllAdvisorStudents);

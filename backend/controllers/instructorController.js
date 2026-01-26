@@ -1,7 +1,7 @@
 /* file: backend/controllers/instructorController.js */
 const supabase = require("../supabaseClient");
 const { sendStatusEmail } = require("../utils/mailer");
-const { sendCustomEmail } = require("../utils/sendCustomEmail"); // ✅ Import sendCustomEmail
+const { sendCustomEmail } = require("../utils/sendCustomEmail");
 
 /* ===================================================
    Helper: Update Course Enrolled Count
@@ -201,6 +201,62 @@ const approveByInstructor = async (req, res) => {
   } catch (err) {
     console.error("INSTRUCTOR ACTION ERROR:", err);
     res.status(500).json({ error: "Action failed." });
+  }
+};
+
+// ===================================================
+// 3b. BULK Approve / Reject (✅ NEW ADDITION)
+// ===================================================
+const bulkApproveByInstructor = async (req, res) => {
+  const { enrollmentIds, action, instructor_id } = req.body; 
+
+  if (!enrollmentIds || !enrollmentIds.length) return res.status(400).json({ error: "No students selected." });
+
+  try {
+    // 1. Fetch all enrollments to verify ownership
+    const { data: enrollments, error } = await supabase
+      .from("enrollments")
+      .select(`
+        enrollment_id, status, course_id,
+        course:courses!enrollments_course_id_fkey ( coordinator_id, title ),
+        student:users!enrollments_student_id_fkey ( full_name, email )
+      `)
+      .in("enrollment_id", enrollmentIds);
+
+    if (error || !enrollments || !enrollments.length) {
+        return res.status(404).json({ error: "No valid enrollments found." });
+    }
+
+    // 2. Verify all belong to this instructor (Coordinator check)
+    const unauthorized = enrollments.some(e => String(e.course.coordinator_id) !== String(instructor_id));
+    if (unauthorized) {
+        return res.status(403).json({ error: "Unauthorized: You are not the coordinator for one or more selected courses." });
+    }
+
+    // 3. Determine New Status
+    let newStatus = "";
+    if (action === "ACCEPT") newStatus = "PENDING_ADVISOR_APPROVAL";
+    else if (action === "REJECT") newStatus = "INSTRUCTOR_REJECTED";
+    else return res.status(400).json({ error: "Invalid Bulk Action" });
+
+    // 4. Update All Records
+    const { error: updateError } = await supabase
+      .from("enrollments")
+      .update({ status: newStatus })
+      .in("enrollment_id", enrollmentIds);
+
+    if (updateError) throw updateError;
+
+    // 5. Send Emails (Fire and forget loop to avoid timeout)
+    enrollments.forEach(e => {
+       sendStatusEmail(e.student.email, e.student.full_name, e.course.title, newStatus).catch(console.error);
+    });
+
+    res.status(200).json({ message: `Successfully processed ${enrollmentIds.length} students.` });
+
+  } catch (err) {
+    console.error("BULK ACTION ERROR:", err);
+    res.status(500).json({ error: "Bulk action failed." });
   }
 };
 
@@ -567,11 +623,12 @@ module.exports = {
   getInstructorCourses,
   getCourseApplications,
   approveByInstructor,
+  bulkApproveByInstructor, // ✅ EXPORTED
   awardGrade,
   floatCourse,
   getInstructorFeedback,
   getEnrolledStudentsForCourse,
   validateGradesCSV,
   submitMassGrades,
-  sendCourseEmail // ✅ Exported
+  sendCourseEmail 
 };

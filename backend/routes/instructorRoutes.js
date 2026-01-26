@@ -4,6 +4,7 @@ const {
   getInstructorCourses, 
   getCourseApplications, 
   approveByInstructor, 
+  bulkApproveByInstructor, // ✅ IMPORTED
   awardGrade, 
   floatCourse, 
   getInstructorFeedback,
@@ -19,6 +20,7 @@ router.get('/applications', getCourseApplications);
 
 // 2. Manage Students (Approve/Reject)
 router.post('/approve-student', approveByInstructor);
+router.post('/bulk-approve-student', bulkApproveByInstructor); // ✅ NEW ROUTE
 
 // 3. Float New Course
 router.post('/float-course', floatCourse); 
@@ -32,7 +34,7 @@ router.post('/submit-mass-grades', submitMassGrades);
 router.get('/feedback', getInstructorFeedback);
 router.get('/course-students/:course_id', getEnrolledStudentsForCourse);
 
-// 6. Email Communication (✅ ROUTE ADDED)
+// 6. Email Communication
 router.post('/send-course-email', sendCourseEmail);
 
 module.exports = router;

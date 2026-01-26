@@ -210,6 +210,71 @@ exports.approveByAdvisor = async (req, res) => {
   }
 };
 
+// ===================================================
+// 2b. Bulk Approve by Advisor (✅ NEW FEATURE)
+// ===================================================
+exports.bulkApproveByAdvisor = async (req, res) => {
+  const { enrollmentIds, action, advisor_id } = req.body;
+
+  if (!enrollmentIds || !enrollmentIds.length) return res.status(400).json({ error: "No students selected." });
+
+  try {
+    // 1. Fetch & Verify
+    const { data: enrollments } = await supabase
+      .from("enrollments")
+      .select(`
+        enrollment_id, course_id, 
+        student:users!student_id(advisor_id, full_name, email), 
+        course:courses(title)
+      `)
+      .in("enrollment_id", enrollmentIds);
+    
+    if (!enrollments || !enrollments.length) return res.status(404).json({ error: "No valid enrollments found." });
+
+    // Verify ownership
+    const unauthorized = enrollments.some(e => String(e.student.advisor_id) !== String(advisor_id));
+    if (unauthorized) return res.status(403).json({ error: "Unauthorized access to some students." });
+
+    // 2. Determine Status
+    let newStatus = "";
+    if (action === "ACCEPT") newStatus = "ENROLLED";
+    else if (action === "REJECT") newStatus = "ADVISOR_REJECTED";
+    else return res.status(400).json({ error: "Invalid action." });
+
+    // 3. Update
+    const { error: updateError } = await supabase
+      .from("enrollments")
+      .update({ status: newStatus })
+      .in("enrollment_id", enrollmentIds);
+
+    if (updateError) throw updateError;
+
+    // 4. Update Counts (Loop because courses differ)
+    // We get unique course IDs affected
+    const affectedCourses = [...new Set(enrollments.map(e => e.course_id))];
+    
+    // If status became enrolled, update counts
+    if (newStatus === "ENROLLED") {
+      for (const cid of affectedCourses) {
+        await updateCourseEnrolledCount(cid);
+      }
+    }
+
+    // 5. Emails
+    enrollments.forEach(e => {
+       sendStatusEmail(e.student.email, e.student.full_name, e.course.title, newStatus).catch(console.error);
+    });
+
+    res.json({ message: `Bulk action successful for ${enrollmentIds.length} students.` });
+  } catch (err) {
+    console.error("BULK ACTION ERROR:", err);
+    res.status(500).json({ error: "Bulk action failed." });
+  }
+};
+
+/* ==================================================
+   SECTION 3: STUDENT MANAGEMENT & MEETINGS
+================================================== */
 exports.getAllAdvisorStudents = async (req, res) => {
   const { advisor_id } = req.query;
 

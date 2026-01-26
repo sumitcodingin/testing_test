@@ -1,3 +1,4 @@
+/* frontend/src/pages/advisor/AdvisorApprovals.jsx */
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 
@@ -7,13 +8,15 @@ export default function AdvisorApprovals() {
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [students, setStudents] = useState([]);
-  const [viewMode, setViewMode] = useState("PENDING");
+  
+  // ✅ Selection
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
+  const [viewMode, setViewMode] = useState("PENDING");
   const [courseSearch, setCourseSearch] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
 
   /* ================= FETCH COURSES ================= */
-
   useEffect(() => {
     api
       .get("/advisor/student-courses", {
@@ -24,7 +27,6 @@ export default function AdvisorApprovals() {
   }, [user.id]);
 
   /* ================= FETCH STUDENTS ================= */
-
   useEffect(() => {
     if (!selectedCourse) return;
 
@@ -35,12 +37,14 @@ export default function AdvisorApprovals() {
           course_id: selectedCourse.course_id,
         },
       })
-      .then((res) => setStudents(res.data || []))
+      .then((res) => {
+        setStudents(res.data || []);
+        setSelectedIds(new Set()); // Reset on course change
+      })
       .catch(() => setStudents([]));
   }, [selectedCourse, user.id]);
 
-  /* ================= ACTION ================= */
-
+  /* ================= SINGLE ACTION ================= */
   const handleAction = async (enrollmentId, action) => {
     if (!window.confirm(`Are you sure you want to ${action}?`)) return;
 
@@ -53,10 +57,14 @@ export default function AdvisorApprovals() {
     setStudents((prev) =>
       prev.filter((s) => s.enrollment_id !== enrollmentId)
     );
+    setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(enrollmentId);
+        return next;
+    });
   };
 
   /* ================= FILTERS ================= */
-
   const filteredCourses = courses.filter((c) =>
     `${c.course_code} ${c.title}`
       .toLowerCase()
@@ -75,6 +83,43 @@ export default function AdvisorApprovals() {
       const entry = s.student?.entry_no?.toLowerCase() || "";
       return !studentSearch || name.includes(q) || entry.includes(q);
     });
+
+  /* ================= BULK ACTIONS ================= */
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = filteredStudents.map(s => s.enrollment_id);
+      setSelectedIds(new Set(allIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkAction = async (action) => {
+     if (selectedIds.size === 0) return;
+     if (!window.confirm(`Confirm ${action} for ${selectedIds.size} students?`)) return;
+
+     try {
+       await api.post("/advisor/bulk-approve-student", {
+         enrollmentIds: Array.from(selectedIds),
+         action,
+         advisor_id: user.id
+       });
+       
+       alert("Success!");
+       // Refresh list locally
+       setStudents(prev => prev.filter(s => !selectedIds.has(s.enrollment_id)));
+       setSelectedIds(new Set());
+     } catch(e) {
+       alert("Failed to process bulk action.");
+     }
+  };
 
   /* ================= UI ================= */
 
@@ -162,7 +207,10 @@ export default function AdvisorApprovals() {
             <select
               className="border px-3 py-2 text-sm"
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
+              onChange={(e) => {
+                 setViewMode(e.target.value);
+                 setSelectedIds(new Set());
+              }}
             >
               <option value="PENDING">Pending Requests</option>
               <option value="ENROLLED">Enrolled Students</option>
@@ -176,64 +224,71 @@ export default function AdvisorApprovals() {
             />
           </div>
 
+          {/* ✅ BULK ACTIONS UI */}
+          {selectedIds.size > 0 && viewMode === "PENDING" && (
+             <div className="bg-gray-100 p-2 mb-2 flex gap-2 items-center rounded border">
+                <span className="font-bold text-sm text-gray-700 ml-2">{selectedIds.size} Selected</span>
+                <Btn green onClick={() => handleBulkAction("ACCEPT")}>Accept Selected</Btn>
+                <Btn red onClick={() => handleBulkAction("REJECT")}>Reject Selected</Btn>
+             </div>
+          )}
+
           {/* ===== STUDENT TABLE ===== */}
-          <StudentTable
-            students={filteredStudents}
-            viewMode={viewMode}
-            onAction={handleAction}
-          />
+          <div className="bg-white border">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  {/* ✅ SELECT ALL HEADER */}
+                  {viewMode === "PENDING" && (
+                     <th className="px-3 py-2 w-10">
+                        <input type="checkbox" onChange={handleSelectAll} checked={filteredStudents.length > 0 && selectedIds.size === filteredStudents.length} />
+                     </th>
+                  )}
+                  <th className="px-3 py-2 text-left">Student</th>
+                  <th className="px-3 py-2">Department</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.length === 0 ? <tr><td colSpan="4" className="p-4 text-center">No students found.</td></tr> :
+                filteredStudents.map((s) => (
+                  <tr key={s.enrollment_id} className={`border-t ${selectedIds.has(s.enrollment_id) ? 'bg-blue-50' : ''}`}>
+                    {/* ✅ ROW CHECKBOX */}
+                    {viewMode === "PENDING" && (
+                      <td className="px-3 py-2">
+                        <input type="checkbox" checked={selectedIds.has(s.enrollment_id)} onChange={() => handleSelectOne(s.enrollment_id)} />
+                      </td>
+                    )}
+                    <td className="px-3 py-2">
+                      <b>{s.student?.full_name}</b>
+                      <div className="text-xs text-gray-600">
+                        {s.student?.entry_no || s.student?.email}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">{s.student?.department}</td>
+                    <td className="px-3 py-2 text-right space-x-2">
+                      {viewMode === "PENDING" ? (
+                        <>
+                          <Btn green onClick={() => handleAction(s.enrollment_id, "ACCEPT")}>
+                            Accept
+                          </Btn>
+                          <Btn red onClick={() => handleAction(s.enrollment_id, "REJECT")}>
+                            Reject
+                          </Btn>
+                        </>
+                      ) : (
+                        <Btn red outline onClick={() => handleAction(s.enrollment_id, "REMOVE")}>
+                          Remove
+                        </Btn>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
-    </div>
-  );
-}
-
-/* ================= STUDENT TABLE ================= */
-
-function StudentTable({ students, viewMode, onAction }) {
-  if (!students.length)
-    return <p className="text-sm text-gray-500">No records found.</p>;
-
-  return (
-    <div className="bg-white border">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-3 py-2 text-left">Student</th>
-            <th className="px-3 py-2">Department</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((s) => (
-            <tr key={s.enrollment_id} className="border-t">
-              <td className="px-3 py-2">
-                <b>{s.student?.full_name}</b>
-                <div className="text-xs text-gray-600">
-                  {s.student?.entry_no || s.student?.email}
-                </div>
-              </td>
-              <td className="px-3 py-2">{s.student?.department}</td>
-              <td className="px-3 py-2 text-right space-x-2">
-                {viewMode === "PENDING" ? (
-                  <>
-                    <Btn green onClick={() => onAction(s.enrollment_id, "ACCEPT")}>
-                      Accept
-                    </Btn>
-                    <Btn red onClick={() => onAction(s.enrollment_id, "REJECT")}>
-                      Reject
-                    </Btn>
-                  </>
-                ) : (
-                  <Btn red outline onClick={() => onAction(s.enrollment_id, "REMOVE")}>
-                    Remove
-                  </Btn>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

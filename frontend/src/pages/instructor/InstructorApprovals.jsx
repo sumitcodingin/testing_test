@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 
-// ... (CSV Download function remains the same) ...
+// CSV Download function
 const downloadEnrolledStudentsCSV = async (course_id, course_code, instructor_id) => {
   const res = await api.get(`/instructor/course-students/${course_id}`, {
     params: { instructor_id },
@@ -21,6 +21,9 @@ export default function InstructorApprovals() {
   const [courses, setCourses] = useState([]);
   const [applications, setApplications] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  
+  // ✅ Selection State for Bulk Actions
+  const [selectedIds, setSelectedIds] = useState(new Set());
   
   // ✅ State for Modals
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -49,11 +52,14 @@ export default function InstructorApprovals() {
   useEffect(() => {
     if (!isSessionValid || !selectedCourse) return;
     api.get("/instructor/applications", { params: { course_id: selectedCourse.course_id } })
-      .then(res => setApplications(res.data || []))
+      .then(res => {
+        setApplications(res.data || []);
+        setSelectedIds(new Set()); // Reset selection on fresh load
+      })
       .catch(() => setApplications([]));
   }, [isSessionValid, selectedCourse]);
 
-  /* ================= ACTIONS ================= */
+  /* ================= SINGLE ACTION ================= */
   const handleAction = async (enrollmentId, action) => {
     if (!isSessionValid) return;
     if (action === "REMOVE" && !window.confirm("Remove student?")) return;
@@ -70,6 +76,51 @@ export default function InstructorApprovals() {
        ));
     } else {
        setApplications(prev => prev.filter(a => a.enrollment_id !== enrollmentId));
+    }
+    // Remove from selection if present
+    setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(enrollmentId);
+        return next;
+    });
+  };
+
+  /* ================= BULK ACTIONS ================= */
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = filteredStudents.map(s => s.enrollment_id);
+      setSelectedIds(new Set(allIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleBulkAction = async (action) => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Are you sure you want to ${action} ${selectedIds.size} students?`)) return;
+
+    try {
+      await api.post("/instructor/bulk-approve-student", {
+        enrollmentIds: Array.from(selectedIds),
+        action,
+        instructor_id: user.id
+      });
+      
+      alert("Success!");
+      // Refresh Data
+      const res = await api.get("/instructor/applications", { params: { course_id: selectedCourse.course_id } });
+      setApplications(res.data || []);
+      setSelectedIds(new Set());
+
+    } catch (err) {
+      alert("Bulk action failed.");
     }
   };
 
@@ -186,19 +237,91 @@ export default function InstructorApprovals() {
           <div className="flex gap-4 mb-4 border-b">
             <button 
               className={`pb-2 px-1 ${viewMode === 'PENDING' ? 'border-b-2 border-black font-bold' : 'text-gray-500'}`}
-              onClick={() => setViewMode('PENDING')}
+              onClick={() => { setViewMode('PENDING'); setSelectedIds(new Set()); }}
             >
               Pending Requests
             </button>
             <button 
               className={`pb-2 px-1 ${viewMode === 'APPROVED' ? 'border-b-2 border-black font-bold' : 'text-gray-500'}`}
-              onClick={() => setViewMode('APPROVED')}
+              onClick={() => { setViewMode('APPROVED'); setSelectedIds(new Set()); }}
             >
               Processed (Enrolled / Advisor Status)
             </button>
           </div>
 
-          <StudentTable students={filteredStudents} viewMode={viewMode} onAction={handleAction} />
+          {/* ✅ BULK ACTION BAR */}
+          {viewMode === "PENDING" && selectedIds.size > 0 && (
+            <div className="bg-blue-50 border border-blue-200 p-2 mb-3 flex items-center gap-4 rounded">
+              <span className="text-sm font-bold text-blue-800">{selectedIds.size} Selected</span>
+              <button onClick={() => handleBulkAction("ACCEPT")} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">Accept Selected</button>
+              <button onClick={() => handleBulkAction("REJECT")} className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">Reject Selected</button>
+            </div>
+          )}
+
+          <div className="bg-white border">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                   {/* ✅ SELECT ALL CHECKBOX */}
+                   {viewMode === "PENDING" && (
+                     <th className="px-3 py-2 w-10">
+                       <input type="checkbox" onChange={handleSelectAll} checked={filteredStudents.length > 0 && selectedIds.size === filteredStudents.length} />
+                     </th>
+                   )}
+                   <th className="px-3 py-2 text-left">Student Name</th>
+                   <th className="px-3 py-2 text-left">Department</th>
+                   <th className="px-3 py-2 text-right">Status / Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.length === 0 ? <tr><td colSpan="4" className="p-4 text-center text-gray-500">No records found.</td></tr> :
+                filteredStudents.map(a => (
+                  <tr key={a.enrollment_id} className={`border-t ${selectedIds.has(a.enrollment_id) ? 'bg-blue-50' : ''}`}>
+                    {/* ✅ ROW CHECKBOX */}
+                    {viewMode === "PENDING" && (
+                      <td className="px-3 py-2">
+                        <input type="checkbox" checked={selectedIds.has(a.enrollment_id)} onChange={() => handleSelectOne(a.enrollment_id)} />
+                      </td>
+                    )}
+                    <td className="px-3 py-2">
+                      <b>{a.student?.full_name}</b><br/>
+                      <span className="text-xs text-gray-500">{a.student?.email}</span>
+                    </td>
+                    <td className="px-3 py-2">{a.student?.department}</td>
+                    <td className="px-3 py-2 text-right">
+                      {viewMode === "PENDING" ? (
+                        <>
+                          <button onClick={() => handleAction(a.enrollment_id, "ACCEPT")} className="text-green-600 font-bold mr-3">Accept</button>
+                          <button onClick={() => handleAction(a.enrollment_id, "REJECT")} className="text-red-600 font-bold">Reject</button>
+                        </>
+                      ) : (
+                        <>
+                          {/* 1. ENROLLED */}
+                          {a.status === "ENROLLED" && (
+                            <button onClick={() => handleAction(a.enrollment_id, "REMOVE")} className="text-red-600 underline">Remove</button>
+                          )}
+
+                          {/* 2. PENDING ADVISOR */}
+                          {a.status === "PENDING_ADVISOR_APPROVAL" && (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded border border-yellow-200">
+                              Waiting for Advisor
+                            </span>
+                          )}
+
+                          {/* 3. REJECTED BY ADVISOR */}
+                          {a.status === "ADVISOR_REJECTED" && (
+                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded border border-red-200 font-bold">
+                              Rejected by Advisor
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -224,64 +347,6 @@ export default function InstructorApprovals() {
 }
 
 /* ================= HELPERS & MODALS ================= */
-
-function StudentTable({ students, viewMode, onAction }) {
-  if (!students.length) return <p className="text-sm text-gray-500">No records found.</p>;
-
-  return (
-    <div className="bg-white border">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50">
-           <tr>
-             <th className="px-3 py-2 text-left">Student Name</th>
-             <th className="px-3 py-2 text-left">Department</th>
-             <th className="px-3 py-2 text-right">Status / Action</th>
-           </tr>
-        </thead>
-        <tbody>
-          {students.map(a => (
-            <tr key={a.enrollment_id} className="border-t">
-              <td className="px-3 py-2">
-                <b>{a.student?.full_name}</b><br/>
-                <span className="text-xs text-gray-500">{a.student?.email}</span>
-              </td>
-              <td className="px-3 py-2">{a.student?.department}</td>
-              <td className="px-3 py-2 text-right">
-                {viewMode === "PENDING" ? (
-                  <>
-                    <button onClick={() => onAction(a.enrollment_id, "ACCEPT")} className="text-green-600 font-bold mr-3">Accept</button>
-                    <button onClick={() => onAction(a.enrollment_id, "REJECT")} className="text-red-600 font-bold">Reject</button>
-                  </>
-                ) : (
-                  <>
-                    {/* 1. ENROLLED */}
-                    {a.status === "ENROLLED" && (
-                      <button onClick={() => onAction(a.enrollment_id, "REMOVE")} className="text-red-600 underline">Remove</button>
-                    )}
-
-                    {/* 2. PENDING ADVISOR */}
-                    {a.status === "PENDING_ADVISOR_APPROVAL" && (
-                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded border border-yellow-200">
-                        Waiting for Advisor
-                      </span>
-                    )}
-
-                    {/* 3. REJECTED BY ADVISOR */}
-                    {a.status === "ADVISOR_REJECTED" && (
-                      <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded border border-red-200 font-bold">
-                        Rejected by Advisor
-                      </span>
-                    )}
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 // ✅ Modal: Course Details
 function CourseDetailsModal({ course, onClose }) {
