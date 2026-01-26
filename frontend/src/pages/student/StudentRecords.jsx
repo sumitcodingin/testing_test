@@ -29,9 +29,8 @@ export default function StudentRecords() {
     ])
       .then(([recordsRes, allRes]) => {
         const recordsData = recordsRes.data.records || recordsRes.data;
-        const sgpaValue = recordsRes.data.sgpa || "0.00";
         setRecords(Array.isArray(recordsData) ? recordsData : []);
-        setSgpa(sgpaValue);
+        setSgpa(recordsRes.data.sgpa || "0.00");
         setAllRecordsData(allRes.data);
       })
       .catch(() => {
@@ -40,6 +39,11 @@ export default function StudentRecords() {
       })
       .finally(() => setLoading(false));
   }, [user?.id]);
+
+  const isEarnedGrade = (grade) =>
+    grade && !["NP", "NF", "I", "W"].includes(grade);
+
+  const getCredits = (r) => Number(r.courses?.credits || 0);
 
   const statusText = (status) => {
     switch (status) {
@@ -76,7 +80,7 @@ export default function StudentRecords() {
     }
   };
 
-  const filteredRecords = (Array.isArray(records) ? records : []).filter((r) => {
+  const filteredRecords = records.filter((r) => {
     if (!r.courses) return false;
 
     const matchesSearch =
@@ -89,16 +93,31 @@ export default function StudentRecords() {
     return matchesSearch && matchesStatus;
   });
 
+  const registeredCredits = records
+    .filter((r) => r.status === "ENROLLED")
+    .reduce((sum, r) => sum + getCredits(r), 0);
+
+  const earnedCreditsCurrent = records
+    .filter((r) => isEarnedGrade(r.grade))
+    .reduce((sum, r) => sum + getCredits(r), 0);
+
+  const cumulativeEarnedCredits = allRecordsData
+    ? Object.values(allRecordsData.sessions).reduce((total, s) => {
+        return (
+          total +
+          (s.records || [])
+            .filter((r) => isEarnedGrade(r.grade))
+            .reduce((sum, r) => sum + getCredits(r), 0)
+        );
+      }, 0)
+    : 0;
+
   if (!user) return <p>Loading session...</p>;
 
   return (
     <div className="min-h-screen bg-white p-6">
-      {/* Header */}
-      <h1 className="text-2xl font-bold mb-6">
-        Academics for Credit Courses
-      </h1>
+      <h1 className="text-2xl font-bold mb-6">Academics for Credit Courses</h1>
 
-      {/* View Toggle */}
       <div className="mb-6">
         <button
           onClick={() => {
@@ -127,7 +146,6 @@ export default function StudentRecords() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-4 mb-6">
         <input
           type="text"
@@ -169,13 +187,13 @@ export default function StudentRecords() {
         <p>Loading records...</p>
       ) : (
         <>
-          {/* CURRENT SEMESTER */}
           {viewMode === "current" && (
             <>
               <div className="bg-gray-900 text-white px-4 py-2 text-sm mb-1">
                 Academic session: {CURRENT_SESSION} &nbsp;|&nbsp;
                 SGPA: {sgpa} &nbsp;|&nbsp;
-                Credits registered: {records.length}
+                Credits Registered: {registeredCredits} &nbsp;|&nbsp;
+                Earned Credits: {earnedCreditsCurrent}
               </div>
 
               <table className="w-full text-sm border-collapse">
@@ -189,13 +207,9 @@ export default function StudentRecords() {
                       <td className="px-3 py-2">
                         <b>{r.courses.course_code}</b> – {r.courses.title}
                       </td>
-                      <td className="px-3 py-2">Credit</td>
+                      <td className="px-3 py-2">{getCredits(r)}</td>
                       <td className="px-3 py-2">
-                        <span
-                          className={`px-2 py-1 text-xs rounded ${statusColor(
-                            r.status
-                          )}`}
-                        >
+                        <span className={`px-2 py-1 text-xs rounded ${statusColor(r.status)}`}>
                           {statusText(r.status)}
                         </span>
                       </td>
@@ -209,43 +223,28 @@ export default function StudentRecords() {
             </>
           )}
 
-          {/* ALL SEMESTERS */}
           {viewMode === "all" &&
             allRecordsData &&
             Object.entries(allRecordsData.sessions)
-              .filter(
-                ([session]) =>
-                  semesterFilter === "ALL" || session === semesterFilter
-              )
+              .filter(([s]) => semesterFilter === "ALL" || s === semesterFilter)
               .map(([session, data]) => {
-                // Apply search and status filters to each semester's records
-                const filteredSemesterRecords = (data.records || []).filter((r) => {
-                  if (!r.courses) return false;
-
-                  const matchesSearch =
-                    r.courses.course_code.toLowerCase().includes(search.toLowerCase()) ||
-                    r.courses.title.toLowerCase().includes(search.toLowerCase());
-
-                  const matchesStatus =
-                    statusFilter === "ALL" || r.status === statusFilter;
-
-                  return matchesSearch && matchesStatus;
-                });
+                const semesterEarnedCredits = (data.records || [])
+                  .filter((r) => isEarnedGrade(r.grade))
+                  .reduce((sum, r) => sum + getCredits(r), 0);
 
                 return (
-                <div key={session} className="mb-8">
-                  <div className="bg-gray-900 text-white px-4 py-2 text-sm">
-                    Academic session: {session} &nbsp;|&nbsp;
-                    SGPA: {data.sgpa} &nbsp;|&nbsp;
-                    Credits registered: {data.credits_registered} &nbsp;|&nbsp;
-                    Earned Credits: {data.credits_earned} &nbsp;|&nbsp;
-                    CGPA: {allRecordsData.cgpa}
-                  </div>
+                  <div key={session} className="mb-8">
+                    <div className="bg-gray-900 text-white px-4 py-2 text-sm">
+                      Academic session: {session} &nbsp;|&nbsp;
+                      SGPA: {data.sgpa} &nbsp;|&nbsp;
+                      Earned Credits: {semesterEarnedCredits} &nbsp;|&nbsp;
+                      Cumulative Earned Credits: {cumulativeEarnedCredits} &nbsp;|&nbsp;
+                      CGPA: {allRecordsData.cgpa}
+                    </div>
 
-                  <table className="w-full text-sm border-collapse">
-                    <tbody>
-                      {filteredSemesterRecords.length > 0 ? (
-                        filteredSemesterRecords.map((r, i) => (
+                    <table className="w-full text-sm border-collapse">
+                      <tbody>
+                        {(data.records || []).map((r, i) => (
                           <tr
                             key={r.enrollment_id}
                             className={i % 2 === 0 ? "bg-white" : "bg-gray-200"}
@@ -254,13 +253,9 @@ export default function StudentRecords() {
                             <td className="px-3 py-2">
                               <b>{r.courses.course_code}</b> – {r.courses.title}
                             </td>
-                            <td className="px-3 py-2">Credit</td>
+                            <td className="px-3 py-2">{getCredits(r)}</td>
                             <td className="px-3 py-2">
-                              <span
-                                className={`px-2 py-1 text-xs rounded ${statusColor(
-                                  r.status
-                                )}`}
-                              >
+                              <span className={`px-2 py-1 text-xs rounded ${statusColor(r.status)}`}>
                                 {statusText(r.status)}
                               </span>
                             </td>
@@ -268,18 +263,11 @@ export default function StudentRecords() {
                               {r.grade || "—"}
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="px-3 py-2 text-center text-gray-500">
-                            No records found matching the filters.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              );
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
               })}
         </>
       )}
