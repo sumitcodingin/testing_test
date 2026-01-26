@@ -304,7 +304,7 @@ function Btn({ children, onClick, green, red, outline }) {
     cls += "bg-red-600 text-white border-red-600 hover:bg-red-700 ";
   if (outline && red)
     cls += "text-red-600 border-red-600 hover:bg-red-50 ";
-
+// ✅ ADDED: outline
   return (
     <button onClick={onClick} className={cls}>
       {children}
