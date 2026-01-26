@@ -1,3 +1,4 @@
+/* file: frontend/src/pages/instructor/AllCourses.jsx */
 import { useEffect, useState, useCallback } from "react";
 import api from "../../services/api";
 
@@ -8,7 +9,7 @@ export default function AllCourses() {
     dept: "",
     session: "2025-II",
     title: "",
-    instructor: ""
+    instructor: "" // This acts as the Coordinator search filter in backend
   });
 
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -74,7 +75,8 @@ export default function AllCourses() {
           <input name="code" placeholder="Course Code" className="border px-2 py-1 text-sm" value={search.code} onChange={handleChange} />
           <input name="title" placeholder="Course Title" className="border px-2 py-1 text-sm" value={search.title} onChange={handleChange} />
           <input name="dept" placeholder="Department" className="border px-2 py-1 text-sm" value={search.dept} onChange={handleChange} />
-          <input name="instructor" placeholder="Instructor" className="border px-2 py-1 text-sm" value={search.instructor} onChange={handleChange} />
+          {/* UPDATED PLACEHOLDER */}
+          <input name="instructor" placeholder="Coordinator Name" className="border px-2 py-1 text-sm" value={search.instructor} onChange={handleChange} />
           <select name="session" className="border px-2 py-1 text-sm" value={search.session} onChange={handleChange}>
             <option value="2025-II">2025-II</option>
             <option value="2025-I">2025-I</option>
@@ -92,7 +94,9 @@ export default function AllCourses() {
             <thead className="bg-gray-100 border-b border-gray-400">
               <tr>
                 <th className="px-3 py-2 text-left">Course</th>
-                <th className="px-3 py-2 text-left">Instructor</th>
+                {/* RENAMED & ADDED COLUMNS */}
+                <th className="px-3 py-2 text-left">Coordinator</th>
+                <th className="px-3 py-2 text-left">Co-Instructors</th>
                 <th className="px-3 py-2 text-left">Department</th>
                 <th className="px-3 py-2 text-left">Session</th>
                 <th className="px-3 py-2 text-left">Enrolled</th>
@@ -110,7 +114,17 @@ export default function AllCourses() {
                     <p className="font-semibold">{c.title}</p>
                     <p className="text-xs text-gray-500">{c.course_code}</p>
                   </td>
-                  <td className="px-3 py-2">{c.instructor?.full_name || "—"}</td>
+                  
+                  {/* COORDINATOR */}
+                  <td className="px-3 py-2 font-medium">{c.coordinator?.full_name || "—"}</td>
+
+                  {/* CO-INSTRUCTORS */}
+                  <td className="px-3 py-2 text-gray-600">
+                    {c.co_instructor_names && c.co_instructor_names.length > 0 
+                      ? c.co_instructor_names.join(", ") 
+                      : <span className="text-gray-400 italic">None</span>}
+                  </td>
+
                   <td className="px-3 py-2">{c.department}</td>
                   <td className="px-3 py-2">{c.acad_session}</td>
                   <td className="px-3 py-2">
@@ -135,7 +149,12 @@ export default function AllCourses() {
       {selectedCourse && (
         <Modal onClose={() => setSelectedCourse(null)} title="Course Details">
           <Detail label="Course" value={`${selectedCourse.course_code} – ${selectedCourse.title}`} />
-          <Detail label="Instructor" value={selectedCourse.instructor?.full_name || "—"} />
+          {/* UPDATED DETAILS */}
+          <Detail label="Coordinator" value={selectedCourse.coordinator?.full_name || "—"} />
+          <Detail 
+            label="Co-Instructors" 
+            value={selectedCourse.co_instructor_names?.length ? selectedCourse.co_instructor_names.join(", ") : "None"} 
+          />
           <Detail label="Department" value={selectedCourse.department} />
           <Detail label="Session" value={selectedCourse.acad_session} />
           <Detail label="Seats" value={`${selectedCourse.enrolled_count}/${selectedCourse.capacity}`} />
@@ -195,7 +214,7 @@ function Detail({ label, value }) {
   return (
     <div className="flex justify-between border-b py-2 text-sm">
       <span className="font-medium text-gray-700">{label}</span>
-      <span>{value}</span>
+      <span className="text-right max-w-xs">{value}</span>
     </div>
   );
 }

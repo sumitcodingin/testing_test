@@ -4,6 +4,46 @@ const { sendNotificationEmail } = require('../utils/mailer');
 const { sendCustomEmail } = require('../utils/sendCustomEmail');
 
 /* =====================================================
+   HELPER: Fetch Co-Instructor Names
+   (Add this at the top of the file or before the exports)
+===================================================== */
+const attachCourseDetails = async (courses) => {
+  if (!courses || courses.length === 0) return [];
+
+  // 1. Collect all unique User IDs from co_instructors arrays
+  const allUserIds = new Set();
+  courses.forEach(c => {
+    if (Array.isArray(c.co_instructors)) {
+      c.co_instructors.forEach(id => allUserIds.add(id));
+    }
+  });
+
+  // 2. Fetch Names from DB
+  let userMap = {};
+  if (allUserIds.size > 0) {
+    const { data: users } = await supabase
+      .from('users')
+      .select('user_id, full_name')
+      .in('user_id', Array.from(allUserIds));
+    
+    if (users) {
+      users.forEach(u => { userMap[u.user_id] = u.full_name; });
+    }
+  }
+
+  // 3. Map Names to Courses
+  return courses.map(c => {
+    // Filter out coordinator from co-instructors to avoid duplicates
+    const coNames = (c.co_instructors || [])
+      .filter(id => String(id) !== String(c.coordinator_id)) 
+      .map(id => userMap[id])
+      .filter(Boolean);
+
+    return { ...c, co_instructor_names: coNames };
+  });
+};
+
+/* =====================================================
    HELPER: Find Advisor with Minimum Engagements
 ===================================================== */
 const findLeastLoadedAdvisor = async (department) => {
@@ -302,28 +342,32 @@ exports.toggleGradeSubmission = async (req, res) => {
   }
 };
 
-// ============================
-// 8. Get Pending Courses for Admin
-// ============================
+/* ============================
+   8. Get Pending Courses for Admin (UPDATED)
+============================ */
 exports.getPendingCourses = async (req, res) => {
   try {
     // Fetch courses with status PENDING_ADMIN_APPROVAL
-    const { data, error } = await supabase
+    const { data: courses, error } = await supabase
       .from('courses')
       .select(`
         course_id, course_code, title, department, acad_session, capacity, credits,
+        coordinator_id, co_instructors,
         coordinator:users!coordinator_id(full_name, email)
       `)
       .eq('status', 'PENDING_ADMIN_APPROVAL');
 
     if (error) throw error;
-    res.json(data);
+
+    // Attach Co-Instructor Names
+    const coursesWithDetails = await attachCourseDetails(courses || []);
+
+    res.json(coursesWithDetails);
   } catch (err) {
     console.error("GET PENDING COURSES ERROR:", err);
     res.status(500).json({ error: "Fetch failed." });
   }
 };
-
 // ============================
 // 9. Admin Approve/Reject Course
 // ============================
