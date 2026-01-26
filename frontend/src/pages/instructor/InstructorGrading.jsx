@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "../../services/api";
 
 const GRADING_SCHEME = [
@@ -20,6 +20,8 @@ export default function InstructorGrading() {
   const [grades, setGrades] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Mass Grading States
   const [massGradingCourse, setMassGradingCourse] = useState(null);
   const [csvData, setCsvData] = useState([]);
   const [validationResults, setValidationResults] = useState(null);
@@ -29,6 +31,7 @@ export default function InstructorGrading() {
   const user = JSON.parse(localStorage.getItem("user"));
   const isSessionValid = Boolean(user && user.id);
 
+  /* ================= FETCHING ================= */
   useEffect(() => {
     if (!isSessionValid) return;
     api
@@ -37,7 +40,7 @@ export default function InstructorGrading() {
       .catch(() => setCourses([]));
   }, [isSessionValid, user?.id]);
 
-  useEffect(() => {
+  const fetchStudents = useCallback(() => {
     if (!isSessionValid || !selectedCourse) {
       setEnrolledStudents([]);
       setGrades({});
@@ -49,28 +52,42 @@ export default function InstructorGrading() {
       .then(res => {
         const enrolled = (res.data || []).filter(s => s.status === "ENROLLED");
         setEnrolledStudents(enrolled);
+        
+        // Pre-fill existing grades
         const initialGrades = {};
-        enrolled.forEach(s => { initialGrades[s.enrollment_id] = ""; });
+        enrolled.forEach(s => { 
+          initialGrades[s.enrollment_id] = s.grade || ""; 
+        });
         setGrades(initialGrades);
       })
       .finally(() => setLoading(false));
   }, [isSessionValid, selectedCourse]);
 
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  /* ================= ACTIONS ================= */
   const handleGradeChange = (id, grade) => {
     setGrades(prev => ({ ...prev, [id]: grade }));
   };
 
   const handleSubmitGrades = async () => {
-    const ungraded = enrolledStudents.filter(s => !grades[s.enrollment_id]);
-    if (ungraded.length) {
-      alert("Please assign grades to all students.");
+    const hasSelections = Object.values(grades).some(g => g !== "");
+    if (!hasSelections) {
+      alert("No grades selected to submit.");
       return;
     }
-    if (!window.confirm(`Award grades to ${enrolledStudents.length} students?`)) return;
+    
+    if (!window.confirm(`Update grades for all selected students?`)) return;
+    
     setSubmitting(true);
     try {
+      // Only submit for students where a grade is selected
+      const studentsToGrade = enrolledStudents.filter(s => grades[s.enrollment_id]);
+
       await Promise.all(
-        enrolledStudents.map(s =>
+        studentsToGrade.map(s =>
           api.post("/instructor/award-grade", {
             enrollmentId: s.enrollment_id,
             grade: grades[s.enrollment_id],
@@ -78,15 +95,16 @@ export default function InstructorGrading() {
           })
         )
       );
-      alert("Grades awarded successfully");
-      setSelectedCourse(null);
+      alert("Grades updated successfully");
+      fetchStudents(); 
     } catch {
-      alert("Failed to award grades");
+      alert("Failed to update grades");
     } finally {
       setSubmitting(false);
     }
   };
 
+  /* ================= CSV LOGIC ================= */
   const handleCSVUpload = e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -95,7 +113,7 @@ export default function InstructorGrading() {
       const rows = ev.target.result
         .trim()
         .split("\n")
-        .slice(1)
+        .slice(1) // SKIP HEADER ROW
         .map(r => r.split(",").map(c => c.trim()));
       
       setCsvData(rows.map((r, index) => ({ 
@@ -108,16 +126,11 @@ export default function InstructorGrading() {
       setIsValidated(false);
     };
     reader.readAsText(file);
-    e.target.value = null; // Reset input so same file can be re-uploaded
+    e.target.value = null; 
   };
 
-  // FIXED REMOVE ROW FUNCTION
   const removeRow = (rowId) => {
-    // 1. Remove the row from view
     setCsvData(prev => prev.filter(item => item.id !== rowId));
-
-    // 2. Clear validation state to force user to re-validate 
-    // This is the safest way to prevent 'undefined' errors and ensure data integrity
     setValidationResults(null);
     setIsValidated(false);
   };
@@ -131,16 +144,10 @@ export default function InstructorGrading() {
         data: csvData,
         valid_grades: GRADING_SCHEME.map(g => g.grade),
       });
-      
       setValidationResults(res.data);
       setIsValidated(true);
-      
       const invalidCount = res.data.invalid_rows?.length || 0;
-      if (invalidCount > 0) {
-        alert(`Validation complete: ${invalidCount} rows have errors.`);
-      } else {
-        alert("Validation successful.");
-      }
+      alert(invalidCount > 0 ? `Validation complete: ${invalidCount} rows have errors.` : "Validation successful.");
     } catch (err) {
       alert("Error validating CSV data.");
     }
@@ -169,7 +176,7 @@ export default function InstructorGrading() {
   if (!isSessionValid) return <div className="p-8 text-red-600 font-bold">Session expired</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6">
       <h2 className="text-3xl font-bold mb-6 text-black">Award Grades</h2>
 
       {!selectedCourse && !massGradingCourse && (
@@ -189,7 +196,7 @@ export default function InstructorGrading() {
         </div>
       )}
 
-      {/* INDIVIDUAL GRADING */}
+      {/* ================= INDIVIDUAL GRADING ================= */}
       {gradingMode === "individual" && (
         <>
           {!selectedCourse ? (
@@ -202,44 +209,70 @@ export default function InstructorGrading() {
                 </button>
                 <h3 className="text-xl font-bold text-black">{selectedCourse.course_code}: {selectedCourse.title}</h3>
               </div>
-              <div className="border border-gray-300 overflow-hidden rounded-sm">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-300 text-black">
-                    <tr>
-                      <th className="p-2 text-left font-semibold border-r border-gray-300">Student Name</th>
-                      <th className="p-2 text-left font-semibold border-r border-gray-300">Email</th>
-                      <th className="p-2 text-left font-semibold">Grade</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {enrolledStudents.map(s => (
-                      <tr key={s.enrollment_id} className="border-b border-gray-200">
-                        <td className="p-2 border-r border-gray-200">{s.student?.full_name}</td>
-                        <td className="p-2 border-r border-gray-200">{s.student?.email}</td>
-                        <td className="p-2">
-                          <select
-                            value={grades[s.enrollment_id]}
-                            onChange={e => handleGradeChange(s.enrollment_id, e.target.value)}
-                            className="w-full border border-gray-300 px-2 py-1 outline-none focus:border-black"
-                          >
-                            <option value="">Select</option>
-                            {GRADING_SCHEME.map(g => (<option key={g.grade} value={g.grade}>{g.display}</option>))}
-                          </select>
-                        </td>
+              
+              {loading ? (
+                <p className="p-4 text-center">Loading student list...</p>
+              ) : (
+                <div className="border border-gray-300 overflow-hidden rounded-sm">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-300 text-black">
+                      <tr>
+                        <th className="p-2 text-left font-semibold border-r border-gray-300">Student Name</th>
+                        <th className="p-2 text-left font-semibold border-r border-gray-300">Email</th>
+                        <th className="p-2 text-center font-semibold border-r border-gray-300">Previous Grade</th>
+                        <th className="p-2 text-left font-semibold">New Allocation</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {enrolledStudents.map(s => (
+                        <tr key={s.enrollment_id} className="border-b border-gray-200">
+                          <td className="p-2 border-r border-gray-200">{s.student?.full_name}</td>
+                          <td className="p-2 border-r border-gray-200">{s.student?.email}</td>
+                          
+                          {/* PREVIOUS GRADE */}
+                          <td className="p-2 border-r border-gray-200 text-center font-mono">
+                            {s.grade ? (
+                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-bold">
+                                    {s.grade}
+                                </span>
+                            ) : (
+                                <span className="text-gray-400 italic text-xs">None</span>
+                            )}
+                          </td>
+
+                          {/* NEW GRADE SELECTOR */}
+                          <td className="p-2">
+                            <select
+                              value={grades[s.enrollment_id] || ""}
+                              onChange={e => handleGradeChange(s.enrollment_id, e.target.value)}
+                              className="w-full border border-gray-300 px-2 py-1 outline-none focus:border-black"
+                            >
+                              <option value="">Select Grade</option>
+                              {GRADING_SCHEME.map(g => (<option key={g.grade} value={g.grade}>{g.display}</option>))}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end">
+                <button 
+                    onClick={handleSubmitGrades} 
+                    disabled={submitting} 
+                    className="bg-green-700 text-white px-6 py-2 text-sm font-bold hover:bg-green-800 transition disabled:opacity-50"
+                >
+                    {submitting ? "Processing..." : "Submit All Changes"}
+                </button>
               </div>
-              <button onClick={handleSubmitGrades} disabled={submitting} className="mt-6 bg-black text-white px-6 py-2 text-sm font-bold hover:bg-gray-800 transition disabled:opacity-50">
-                {submitting ? "Submitting..." : "Award Grades"}
-              </button>
             </div>
           )}
         </>
       )}
 
-      {/* MASS ALLOCATION */}
+      {/* ================= MASS ALLOCATION ================= */}
       {gradingMode === "mass" && (
         <>
           {!massGradingCourse ? (
@@ -251,6 +284,10 @@ export default function InstructorGrading() {
                   ← Back
                 </button>
                 <h3 className="text-xl font-bold text-black">Mass Allocation: {massGradingCourse.course_code}</h3>
+              </div>
+              
+              <div className="bg-blue-50 p-4 mb-4 text-sm text-blue-800 border border-blue-200">
+                <strong>Format Required:</strong> CSV file with 3 columns (Student Name, Email, Grade). First row (header) is ignored.
               </div>
 
               <div className="mb-6 p-4 border-2 border-dashed border-gray-300 bg-gray-50 flex items-center gap-4">
@@ -283,12 +320,7 @@ export default function InstructorGrading() {
                               <td className={`p-2 border-r border-gray-200 ${isInvalid ? "text-red-800 font-semibold" : ""}`}>{row.email}</td>
                               <td className={`p-2 border-r border-gray-200 ${isInvalid ? "text-red-800 font-bold" : "font-medium"}`}>{row.grade}</td>
                               <td className="p-2 text-center">
-                                <button 
-                                  onClick={() => removeRow(row.id)}
-                                  className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold uppercase hover:bg-red-700"
-                                >
-                                  Remove
-                                </button>
+                                <button onClick={() => removeRow(row.id)} className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold uppercase hover:bg-red-700">Remove</button>
                               </td>
                             </tr>
                           );
@@ -298,9 +330,7 @@ export default function InstructorGrading() {
                   </div>
 
                   <div className="flex gap-3">
-                    <button onClick={handleValidateCSV} className="bg-white border-2 border-black px-5 py-2 text-sm font-bold hover:bg-black hover:text-white transition">
-                      Validate CSV
-                    </button>
+                    <button onClick={handleValidateCSV} className="bg-white border-2 border-black px-5 py-2 text-sm font-bold hover:bg-black hover:text-white transition">Validate CSV</button>
                     {isValidated && (
                       <button 
                         disabled={massSubmitting || (validationResults?.invalid_rows?.length > 0)} 

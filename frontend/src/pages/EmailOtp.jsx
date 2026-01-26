@@ -9,19 +9,13 @@ export default function EmailOtp() {
   const navigate = useNavigate();
 
   /* =========================================================
-     ✅ AUTO-LOGIN CHECK
-     If user exists in storage, redirect to dashboard immediately
+      ✅ AUTO-LOGIN CHECK
   ========================================================= */
-  
   useEffect(() => {
-    
     const user = localStorage.getItem("user");
-    
     if (user) {
-      
       navigate("/dashboard", { replace: true });
     }
-    
   }, [navigate]);
 
   const sendOtp = async () => {
@@ -50,7 +44,7 @@ export default function EmailOtp() {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-gray-100">
       
-      {/* ================= LEFT PANEL ================= */}
+      {/* ================= LEFT PANEL (Hidden on Mobile) ================= */}
       <div className="hidden lg:flex flex-col justify-center items-center bg-white border-r border-gray-300 px-12">
         <img src={logo} alt="IIT Ropar Logo" className="w-40 mb-6" />
         <h1 className="text-3xl font-bold text-gray-900 text-center">
@@ -62,18 +56,26 @@ export default function EmailOtp() {
       </div>
 
       {/* ================= RIGHT FORM ================= */}
-      <div className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-2xl bg-white border border-gray-300 p-10">
-          <h2 className="text-2xl font-bold mb-1">Login</h2>
-          <p className="text-sm text-gray-600 mb-8">Sign in using your institute email</p>
+      <div className="flex items-center justify-center p-4 md:px-6 md:py-12">
+        <div className="w-full max-w-lg bg-white border border-gray-300 p-6 md:p-10 shadow-sm">
+          
+          {/* Mobile Header Logo (Visible only on small screens) */}
+          <div className="lg:hidden flex justify-center mb-6">
+            <img src={logo} alt="IIT Ropar Logo" className="w-20" />
+          </div>
 
-          <div className="mb-10">
-            <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">
+          <div className="text-center md:text-left">
+            <h2 className="text-xl md:text-2xl font-bold mb-1">Login</h2>
+            <p className="text-xs md:text-sm text-gray-600 mb-8">Sign in using your institute email</p>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-[10px] md:text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest border-b pb-1">
               Institute Login
             </h3>
             <input
               type="email"
-              className="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-black transition"
+              className="w-full border border-gray-300 px-3 py-3 text-sm focus:outline-none focus:border-black transition rounded-none appearance-none"
               placeholder="Institute Email (@iitrpr.ac.in)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -81,11 +83,11 @@ export default function EmailOtp() {
             />
           </div>
 
-          <div className="text-center mb-6 text-sm text-gray-600">
+          <div className="text-center mb-8 text-xs md:text-sm text-gray-600">
             Don’t have an account?{" "}
             <span
               onClick={() => !loading && navigate("/signup")}
-              className={`text-blue-600 cursor-pointer hover:underline font-medium ${loading ? 'pointer-events-none opacity-50' : ''}`}
+              className={`text-blue-600 cursor-pointer hover:underline font-semibold ${loading ? 'pointer-events-none opacity-50' : ''}`}
             >
               Create an account
             </span>
@@ -95,7 +97,7 @@ export default function EmailOtp() {
             <button
               onClick={sendOtp}
               disabled={loading}
-              className={`px-12 py-2 text-white text-sm font-semibold transition flex items-center gap-2
+              className={`w-full md:w-auto md:px-16 py-3 text-white text-sm font-semibold transition flex items-center justify-center gap-2
                 ${loading ? "bg-gray-500 cursor-not-allowed" : "bg-black hover:bg-gray-900"}
               `}
             >
