@@ -11,11 +11,10 @@ export default function Courses() {
     dept: "",
     session: "2025-II",
     title: "",
-    instructor: ""
+    instructor: "" // This searches by Coordinator Name
   });
   
   const [selectedCourse, setSelectedCourse] = useState(null);
-  // NEW: State for Enrollment Type selection
   const [selectedEnrollType, setSelectedEnrollType] = useState("CREDIT");
 
   const [enrollmentList, setEnrollmentList] = useState([]);
@@ -83,12 +82,12 @@ export default function Courses() {
       await api.post("/student/apply", {
         student_id: user.id,
         course_id,
-        enrollment_type: selectedEnrollType // Send the selected type
+        enrollment_type: selectedEnrollType
       });
       alert("Enrollment request submitted.");
       fetchData(); 
       setSelectedCourse(null);
-      setSelectedEnrollType("CREDIT"); // Reset to default
+      setSelectedEnrollType("CREDIT");
     } catch (err) {
       alert(err.response?.data?.error || "Application failed.");
     }
@@ -153,7 +152,6 @@ export default function Courses() {
     const enrollment = appliedMap[course.course_id];
     const status = enrollment?.status;
     
-    // Check if adding this course exceeds limit
     const potentialCredits = creditsUsed + (course.credits || 0);
     const limitReached = potentialCredits > CREDIT_LIMIT;
 
@@ -195,7 +193,7 @@ export default function Courses() {
             <option key={dept} value={dept}>{dept}</option>
           ))}
         </select>
-        <input name="instructor" placeholder="Instructor Name" className="border p-2 rounded-none text-sm" value={search.instructor} onChange={handleChange} />
+        <input name="instructor" placeholder="Coordinator Name" className="border p-2 rounded-none text-sm" value={search.instructor} onChange={handleChange} />
         <select name="session" className="border p-2 rounded-none text-sm" value={search.session} onChange={handleChange}>
           <option value="2025-II">2025-II</option>
           <option value="2025-I">2025-I</option>
@@ -220,7 +218,12 @@ export default function Courses() {
                   <div>
                     <h3 className="font-bold text-lg text-black">{c.title}</h3>
                     <p className="text-sm text-gray-500">{c.course_code} • {c.credits} Credits</p>
-                    <p className="text-sm text-gray-700">Instructor: {c.instructor?.full_name || "—"}</p>
+                    {/* CHANGED: Instructor -> Coordinator */}
+                    <p className="text-sm text-gray-700">Coordinator: {c.coordinator?.full_name || "—"}</p>
+                    {/* ADDED: Teaching Team */}
+                    {c.co_instructor_names && c.co_instructor_names.length > 0 && (
+                       <p className="text-xs text-gray-500 mt-1">Co-Instructors: {c.co_instructor_names.join(", ")}</p>
+                    )}
                   </div>
                   {enrollment && (
                     <div className="flex flex-col items-end">
@@ -286,10 +289,12 @@ export default function Courses() {
             
             <div className="space-y-3 mb-6 mt-4">
                <div className="flex justify-between border-b pb-2"><span className="font-bold">Credits:</span><span>{selectedCourse.credits}</span></div>
-               <div className="flex justify-between border-b pb-2"><span className="font-bold">Instructor:</span><span>{selectedCourse.instructor?.full_name}</span></div>
+               {/* CHANGED: Instructor -> Coordinator */}
+               <div className="flex justify-between border-b pb-2"><span className="font-bold">Coordinator:</span><span>{selectedCourse.coordinator?.full_name || "—"}</span></div>
+               {/* ADDED: Teaching Team */}
+               <div className="flex justify-between border-b pb-2"><span className="font-bold">Co-Instructors:</span><span className="text-right max-w-[60%]">{selectedCourse.co_instructor_names?.length ? selectedCourse.co_instructor_names.join(", ") : "None"}</span></div>
                <div className="flex justify-between border-b pb-2"><span className="font-bold">Slot:</span><span>{selectedCourse.slot || "N/A"}</span></div>
             
-               {/* NEW: Enrollment Type Selection inside Modal */}
                {!appliedMap[selectedCourse.course_id] && (
                    <div className="flex flex-col mt-4 border-t pt-4">
                        <label className="text-sm font-bold text-gray-700 mb-2">Select Enrollment Type:</label>

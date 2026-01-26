@@ -1,7 +1,7 @@
 const supabase = require('../supabaseClient');
 
 // ============================
-// 1. Search Courses (STUDENTS)
+// 1. Search Courses
 // ============================
 exports.searchCourses = async (req, res) => {
   const { code, dept, session, title, instructor } = req.query;
@@ -10,6 +10,7 @@ exports.searchCourses = async (req, res) => {
     const coordinatorSelect = instructor 
       ? `coordinator:users!courses_coordinator_id_fkey!inner(full_name, email)` 
       : `coordinator:users!courses_coordinator_id_fkey(full_name, email)`;
+
     let query = supabase
       .from('courses')
       .select(`
@@ -22,12 +23,18 @@ exports.searchCourses = async (req, res) => {
         enrolled_count,
         credits,
         slot,
+        status,
+        coordinator_id,
+        co_instructors,
         ${coordinatorSelect}
-      `)
-      // Students see ONLY approved courses
-      .eq('status', 'APPROVED');
+      `);
 
-    // STRING FILTERS ONLY
+    // Only apply status filter if not explicitly asking for all (optional)
+    if (!req.query.showAll) {
+       query = query.eq('status', 'APPROVED');
+    }
+
+    // Filters
     if (dept) query = query.ilike('department', `%${dept}%`);
     if (session) query = query.eq('acad_session', session);
     if (code) query = query.ilike('course_code', `%${code}%`);
@@ -36,15 +43,49 @@ exports.searchCourses = async (req, res) => {
       query = query.ilike('coordinator.full_name', `%${instructor}%`);
     }
 
-    const { data, error } = await query;
+    const { data: courses, error } = await query;
 
     if (error) {
       console.error("COURSE SEARCH ERROR:", error);
       return res.status(500).json({ error: "Search failed." });
     }
 
-    // 🔒 FILTER OUT FULL COURSES SAFELY
-    const availableCourses = data.filter(
+    // 2. Fetch Co-Instructor Details
+    const allCoInstructorIds = new Set();
+    courses.forEach(c => {
+      if (Array.isArray(c.co_instructors)) {
+        c.co_instructors.forEach(id => allCoInstructorIds.add(id));
+      }
+    });
+
+    let userMap = {};
+    if (allCoInstructorIds.size > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('user_id, full_name')
+        .in('user_id', Array.from(allCoInstructorIds));
+      
+      if (users) {
+        users.forEach(u => { userMap[u.user_id] = u.full_name; });
+      }
+    }
+
+    // 3. Attach Names
+    const coursesWithDetails = courses.map(c => {
+      // Filter out coordinator from co-instructors to avoid duplicates
+      const coNames = (c.co_instructors || [])
+        .filter(id => String(id) !== String(c.coordinator_id)) 
+        .map(id => userMap[id])
+        .filter(Boolean);
+
+      return {
+        ...c,
+        co_instructor_names: coNames
+      };
+    });
+
+    // 4. Filter Full Courses (Optional logic)
+    const availableCourses = coursesWithDetails.filter(
       (c) => c.enrolled_count < c.capacity
     );
 
