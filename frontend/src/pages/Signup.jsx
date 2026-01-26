@@ -15,8 +15,10 @@ export default function Signup() {
     entry_no: ""
   });
 
+  const [loading, setLoading] = useState(false);
+
   /* =========================================================
-     ✅ AUTO-LOGIN CHECK (For Signup Page too)
+      ✅ AUTO-LOGIN CHECK (For Signup Page too)
   ========================================================= */
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -42,18 +44,21 @@ export default function Signup() {
       return;
     }
 
+    setLoading(true);
     try {
       await api.post("/auth/signup/request-otp", form);
       navigate("/verify-signup", { state: form });
     } catch (err) {
       alert(err.response?.data?.error || "Signup OTP failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-gray-100">
 
-      {/* ================= LEFT BRANDING PANEL ================= */}
+      {/* ================= LEFT BRANDING PANEL (Hidden on Mobile) ================= */}
       <div className="hidden lg:flex flex-col justify-center items-center bg-white border-r border-gray-300 px-12">
         <img src={logo} alt="IIT Ropar Logo" className="w-40 mb-6" />
         <h1 className="text-3xl font-bold text-gray-900 text-center">
@@ -65,24 +70,31 @@ export default function Signup() {
       </div>
 
       {/* ================= RIGHT SIGNUP FORM ================= */}
-      <div className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-2xl bg-white border border-gray-300 p-10">
+      <div className="flex items-center justify-center p-4 md:px-6 md:py-12">
+        <div className="w-full max-w-2xl bg-white border border-gray-300 p-6 md:p-10 shadow-sm">
+
+          {/* Mobile Header Logo (Visible only on small screens) */}
+          <div className="lg:hidden flex justify-center mb-6">
+            <img src={logo} alt="IIT Ropar Logo" className="w-20" />
+          </div>
 
           {/* Header */}
-          <h2 className="text-2xl font-bold mb-1">Create Account</h2>
-          <p className="text-sm text-gray-600 mb-8">
-            Sign up using your institute credentials
-          </p>
+          <div className="text-center md:text-left">
+            <h2 className="text-xl md:text-2xl font-bold mb-1">Create Account</h2>
+            <p className="text-xs md:text-sm text-gray-600 mb-8">
+              Sign up using your institute credentials
+            </p>
+          </div>
 
           {/* ================= BASIC DETAILS ================= */}
-          <div className="mb-8">
-            <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">
+          <div className="mb-6 md:mb-8">
+            <h3 className="text-[10px] md:text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest border-b pb-1">
               Basic Information
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
-                className="border border-gray-300 px-3 py-2 text-sm"
+                className="border border-gray-300 px-3 py-2.5 text-sm focus:border-black focus:outline-none transition"
                 placeholder="Full Name"
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
@@ -90,14 +102,14 @@ export default function Signup() {
 
               <input
                 type="email"
-                className="border border-gray-300 px-3 py-2 text-sm"
+                className="border border-gray-300 px-3 py-2.5 text-sm focus:border-black focus:outline-none transition"
                 placeholder="Institute Email (@iitrpr.ac.in)"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
 
               <select
-                className="border border-gray-300 px-3 py-2 text-sm bg-white"
+                className="border border-gray-300 px-3 py-2.5 text-sm bg-white focus:border-black focus:outline-none transition"
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
@@ -107,7 +119,7 @@ export default function Signup() {
               </select>
 
               <select
-                className="border border-gray-300 px-3 py-2 text-sm bg-white"
+                className="border border-gray-300 px-3 py-2.5 text-sm bg-white focus:border-black focus:outline-none transition"
                 value={form.department}
                 onChange={(e) => setForm({ ...form, department: e.target.value })}
               >
@@ -128,21 +140,21 @@ export default function Signup() {
 
           {/* ================= STUDENT DETAILS ================= */}
           {form.role === "Student" && (
-            <div className="mb-10 border border-gray-200 bg-gray-50 p-6">
-              <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">
+            <div className="mb-8 md:mb-10 border border-gray-200 bg-gray-50 p-4 md:p-6 rounded">
+              <h3 className="text-[10px] md:text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest border-b pb-1">
                 Student Academic Details
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
-                  className="border border-gray-300 px-3 py-2 text-sm"
+                  className="border border-gray-300 px-3 py-2.5 text-sm bg-white focus:border-black focus:outline-none transition"
                   placeholder="Batch (e.g. 2023)"
                   value={form.batch}
                   onChange={(e) => setForm({ ...form, batch: e.target.value })}
                 />
 
                 <input
-                  className="border border-gray-300 px-3 py-2 text-sm"
+                  className="border border-gray-300 px-3 py-2.5 text-sm bg-white focus:border-black focus:outline-none transition"
                   placeholder="Entry Number (e.g. 2023CSB1001)"
                   value={form.entry_no}
                   onChange={(e) => setForm({ ...form, entry_no: e.target.value })}
@@ -151,27 +163,27 @@ export default function Signup() {
             </div>
           )}
 
-          {/* ================= LOGIN LINK (CENTERED) ================= */}
-          <div className="text-center mb-4">
-            <span className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <button
-                onClick={() => navigate("/login")}
-                className="text-blue-600 hover:text-blue-800 font-semibold"
-              >
-                Login here
-              </button>
-            </span>
-          </div>
-
           {/* ================= ACTION ================= */}
-          <div className="flex justify-center">
+          <div className="space-y-4">
             <button
               onClick={sendOtp}
-              className="px-12 py-2 bg-black text-white text-sm font-semibold hover:bg-gray-900 transition"
+              disabled={loading}
+              className="w-full md:w-auto md:px-16 py-3 bg-black text-white text-sm font-semibold hover:bg-gray-800 transition disabled:opacity-50 mx-auto block"
             >
-              Send OTP
+              {loading ? "Sending..." : "Send OTP"}
             </button>
+
+            <div className="text-center pt-2">
+              <span className="text-xs md:text-sm text-gray-600">
+                Already have an account?{" "}
+                <button
+                  onClick={() => navigate("/login")}
+                  className="text-blue-600 hover:text-blue-800 font-semibold"
+                >
+                  Login here
+                </button>
+              </span>
+            </div>
           </div>
 
         </div>

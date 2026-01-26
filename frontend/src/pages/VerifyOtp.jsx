@@ -16,8 +16,7 @@ export default function VerifyOtp() {
   const inputsRef = useRef([]);
 
   /* ===============================
-     Persist email (refresh safe)
-     Changed to localStorage to survive tab close/reopen during OTP flow
+      Persist email (refresh safe)
   =============================== */
   useEffect(() => {
     if (emailFromState) {
@@ -29,7 +28,7 @@ export default function VerifyOtp() {
   }, [emailFromState]);
 
   /* ===============================
-     OTP resend timer
+      OTP resend timer
   =============================== */
   useEffect(() => {
     if (timer === 0) return;
@@ -38,18 +37,18 @@ export default function VerifyOtp() {
   }, [timer]);
 
   /* ===============================
-     Missing email fallback
+      Missing email fallback
   =============================== */
   if (!email) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-6 border border-gray-300 text-center">
-          <p className="text-red-600 font-semibold mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white p-6 border border-gray-300 text-center w-full max-w-sm">
+          <p className="text-red-600 font-semibold mb-4 text-sm md:text-base">
             Session expired. Please login again.
           </p>
           <button
             onClick={() => navigate("/", { replace: true })}
-            className="bg-black text-white px-6 py-2"
+            className="bg-black text-white px-6 py-2 w-full text-sm"
           >
             Go to Login
           </button>
@@ -59,7 +58,7 @@ export default function VerifyOtp() {
   }
 
   /* ===============================
-     OTP Input Handlers
+      OTP Input Handlers
   =============================== */
   const handleChange = (value, index) => {
     if (!/^\d?$/.test(value)) return;
@@ -80,7 +79,7 @@ export default function VerifyOtp() {
   };
 
   /* ===============================
-     VERIFY OTP
+      VERIFY OTP
   =============================== */
   const verifyOtp = async () => {
     const otpValue = otp.join("");
@@ -96,23 +95,15 @@ export default function VerifyOtp() {
         otp: otpValue,
       });
 
-      // 1. Destructure backend response
       const { sessionId, user } = res.data;
-
-      // 2. CONSTRUCT A SINGLE SESSION OBJECT
       const sessionUser = {
-        ...user,             
-        user_id: user.id,    
-        sessionId: sessionId 
+        ...user,
+        user_id: user.id,
+        sessionId: sessionId,
       };
 
-      // 3. Store in localStorage (PERSISTENT SESSION)
       localStorage.setItem("user", JSON.stringify(sessionUser));
-      
-      // Clear temporary auth data
       localStorage.removeItem("otp_email");
-
-      // 4. Navigate to dashboard
       navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error(err);
@@ -123,7 +114,7 @@ export default function VerifyOtp() {
   };
 
   /* ===============================
-     RESEND OTP
+      RESEND OTP
   =============================== */
   const resendOtp = async () => {
     try {
@@ -135,13 +126,9 @@ export default function VerifyOtp() {
     }
   };
 
-  /* ===============================
-     UI
-  =============================== */
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-gray-100">
-
-      {/* LEFT BRAND PANEL */}
+      {/* LEFT BRAND PANEL (Hidden on Mobile) */}
       <div className="hidden lg:flex flex-col justify-center items-center bg-white border-r border-gray-300 px-12">
         <img src={logo} alt="IIT Ropar Logo" className="w-40 mb-6" />
         <h1 className="text-3xl font-bold text-gray-900 text-center">
@@ -152,27 +139,34 @@ export default function VerifyOtp() {
         </p>
       </div>
 
-      {/* RIGHT OTP PANEL */}
-      <div className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-2xl bg-white border border-gray-300 p-10">
+      {/* RIGHT OTP PANEL (Centered on Mobile) */}
+      <div className="flex items-center justify-center p-4 md:px-6 md:py-12">
+        <div className="w-full max-w-lg bg-white border border-gray-300 p-6 md:p-10 shadow-sm">
+          
+          {/* Mobile Header Logo (Visible only on small screens) */}
+          <div className="lg:hidden flex justify-center mb-6">
+            <img src={logo} alt="IIT Ropar Logo" className="w-20" />
+          </div>
 
-          <h2 className="text-2xl font-bold mb-1">Verify OTP</h2>
-          <p className="text-sm text-gray-600 mb-8">
-            Enter the 6-digit code sent to <b>{email}</b>
+          <h2 className="text-xl md:text-2xl font-bold mb-1 text-center md:text-left">Verify OTP</h2>
+          <p className="text-xs md:text-sm text-gray-600 mb-8 text-center md:text-left">
+            Enter the 6-digit code sent to <br className="md:hidden" />
+            <b className="text-gray-900">{email}</b>
           </p>
 
-          {/* OTP BOXES */}
-          <div className="flex justify-between gap-3 mb-8">
+          {/* OTP BOXES - Responsive gap and sizing */}
+          <div className="flex justify-center gap-2 md:gap-3 mb-8">
             {otp.map((digit, index) => (
               <input
                 key={index}
                 ref={(el) => (inputsRef.current[index] = el)}
                 type="text"
+                inputMode="numeric"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(e.target.value, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="w-14 h-14 border border-gray-400 text-center text-xl font-bold focus:outline-none focus:border-black"
+                className="w-10 h-12 md:w-14 md:h-14 border border-gray-400 text-center text-lg md:text-xl font-bold focus:outline-none focus:border-black rounded-none appearance-none"
               />
             ))}
           </div>
@@ -182,14 +176,14 @@ export default function VerifyOtp() {
             <button
               onClick={verifyOtp}
               disabled={loading}
-              className="px-12 py-2 bg-black text-white font-semibold hover:bg-gray-900 transition disabled:opacity-50"
+              className="w-full md:w-auto md:px-12 py-3 bg-black text-white font-semibold hover:bg-gray-900 transition disabled:opacity-50 text-sm md:text-base"
             >
               {loading ? "Verifying..." : "Verify & Login"}
             </button>
           </div>
 
           {/* RESEND */}
-          <div className="flex justify-between text-sm mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center text-xs md:text-sm mb-6 gap-2">
             <span className="text-gray-600">Didn’t receive OTP?</span>
             <button
               onClick={resendOtp}
@@ -205,11 +199,10 @@ export default function VerifyOtp() {
           {/* CHANGE EMAIL */}
           <button
             onClick={() => navigate("/", { replace: true })}
-            className="w-full border border-gray-300 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+            className="w-full border border-gray-300 py-2 text-xs md:text-sm text-gray-700 hover:bg-gray-50 transition"
           >
             Change Email
           </button>
-
         </div>
       </div>
     </div>
