@@ -139,6 +139,7 @@ export default function InstructorFeedback() {
         <Select label="Feedback Type" value={feedbackType} onChange={setFeedbackType}>
           <option value="">All</option>
           <option value="Mid-sem">Mid-sem</option>
+          <option value="End-sem">End-sem</option>
         </Select>
       </div>
 
