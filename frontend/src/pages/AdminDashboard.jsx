@@ -5,6 +5,8 @@ import { Lock, Unlock, Settings } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("PENDING"); // Default to Pending Users
+const [sidebarOpen, setSidebarOpen] = useState(false);
+
   
   // Use localStorage as per previous fixes
   const user = JSON.parse(localStorage.getItem("user"));
@@ -16,13 +18,40 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
+      {/* MOBILE TOP BAR */}
+<div className="md:hidden flex items-center justify-between bg-neutral-900 text-white px-4 py-3">
+  <button onClick={() => setSidebarOpen(true)} className="text-2xl">
+  ☰
+</button>
+
+  <span className="font-semibold">Admin Portal</span>
+</div>
+
       {/* ================= SIDEBAR ================= */}
-      <nav className="fixed top-0 left-0 h-screen w-64 bg-neutral-900 text-neutral-200 shadow-lg flex flex-col justify-between z-10">
+      <nav
+  className={`
+    fixed top-0 left-0 h-screen w-64 bg-neutral-900 text-neutral-200 shadow-lg
+    flex flex-col justify-between z-50
+    transform transition-transform duration-300
+    ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    md:translate-x-0
+  `}
+>
+
         {/* TOP */}
         <div>
-          <h1 className="text-xl font-bold px-6 py-5 border-b border-neutral-700 tracking-wide text-white">
-            Admin Portal
-          </h1>
+          <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-700">
+  <h1 className="text-xl font-bold tracking-wide text-white">
+    Admin Portal
+  </h1>
+  <button
+    className="md:hidden text-neutral-400 text-xl"
+    onClick={() => setSidebarOpen(false)}
+  >
+    ✕
+  </button>
+</div>
+
 
           <div className="flex flex-col mt-4">
             <div className="px-6 py-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
@@ -31,7 +60,7 @@ export default function AdminDashboard() {
             
             <NavBtn
               active={activeTab === "CONTROLS"}
-              onClick={() => setActiveTab("CONTROLS")}
+              onClick={() => {setActiveTab("CONTROLS");setSidebarOpen(false);}}
             >
               System Controls
             </NavBtn>
@@ -42,28 +71,28 @@ export default function AdminDashboard() {
             
             <NavBtn
               active={activeTab === "PENDING"}
-              onClick={() => setActiveTab("PENDING")}
+              onClick={() => {setActiveTab("PENDING");setSidebarOpen(false);}}
             >
               Pending Users
             </NavBtn>
 
             <NavBtn
               active={activeTab === "ACTIVE"}
-              onClick={() => setActiveTab("ACTIVE")}
+              onClick={() => {setActiveTab("ACTIVE");setSidebarOpen(false);}}
             >
               Active Users
             </NavBtn>
 
             <NavBtn
               active={activeTab === "BLOCKED"}
-              onClick={() => setActiveTab("BLOCKED")}
+              onClick={() => {setActiveTab("BLOCKED");setSidebarOpen(false);}}
             >
               Blocked Users
             </NavBtn>
 
             <NavBtn
               active={activeTab === "REJECTED"}
-              onClick={() => setActiveTab("REJECTED")}
+              onClick={() => {setActiveTab("REJECTED");setSidebarOpen(false);}}
             >
               Rejected Users
             </NavBtn>
@@ -74,14 +103,14 @@ export default function AdminDashboard() {
 
             <NavBtn
               active={activeTab === "COURSE_APPROVALS"}
-              onClick={() => setActiveTab("COURSE_APPROVALS")}
+              onClick={() => {setActiveTab("COURSE_APPROVALS");setSidebarOpen(false);}}
             >
               Course Approvals
             </NavBtn>
 
             <NavBtn
               active={activeTab === "OFFERINGS"}
-              onClick={() => setActiveTab("OFFERINGS")}
+              onClick={() => {setActiveTab("OFFERINGS");setSidebarOpen(false);}}
             >
               All Offerings
             </NavBtn>
@@ -93,7 +122,7 @@ export default function AdminDashboard() {
 
             <NavBtn
               active={activeTab === "PROGRAM_APPROVALS"}
-              onClick={() => setActiveTab("PROGRAM_APPROVALS")}
+              onClick={() => {setActiveTab("PROGRAM_APPROVALS");setSidebarOpen(false);}}
             >
               Program Requests
             </NavBtn>
@@ -114,9 +143,17 @@ export default function AdminDashboard() {
           </button>
         </div>
       </nav>
+      {sidebarOpen && (
+  <div
+    className="fixed inset-0 bg-black/40 z-40 md:hidden"
+    onClick={() => setSidebarOpen(false)}
+  />
+)}
+
 
       {/* ================= MAIN CONTENT ================= */}
-      <main className="ml-64 p-8 min-h-screen overflow-y-auto">
+      <main className="md:ml-64 p-6 min-h-screen overflow-y-auto">
+
         {/* Render System Controls */}
         {activeTab === "CONTROLS" && <SystemControls />}
 

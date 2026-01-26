@@ -218,8 +218,10 @@ export default function MyStudents() {
           {loading ? (
             <p className="text-sm text-gray-500">Loading...</p>
           ) : (
-            <div className="bg-white border rounded overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white border rounded overflow-x-auto">
+              <div className="overflow-x-auto">
+  <table className="w-full text-sm min-w-[600px]">
+
                 <thead className="bg-gray-100">
                   <tr>
                     {/* SELECT ALL CHECKBOX */}
@@ -251,11 +253,13 @@ export default function MyStudents() {
                             </button>
                         </td>
                         <td className="px-4 py-3 font-medium">{s.full_name}</td>
-                        <td className="px-4 py-3">{s.entry_no || "—"}</td>
-                        <td className="px-4 py-3">{s.department}</td>
+                        <td className="px-2 py-2 sm:px-4 sm:py-3">{s.entry_no || "—"}</td>
+                        <td className="px-2 py-2 sm:px-4 sm:py-3">{s.department}</td>
                         <td className="px-4 py-3 text-xs">{s.email}</td>
 
-                        <td className="px-4 py-3 text-right flex gap-2 justify-end">
+                        <td className="px-2 py-2">
+                          <div className="flex flex-col sm:flex-row gap-2 justify-end items-center min-w-[90px]">
+
                             {/* MAIL */}
                             <button
                             onClick={() => {
@@ -281,12 +285,14 @@ export default function MyStudents() {
                             >
                             View Details
                             </button>
+                            </div>
                         </td>
                         </tr>
                     );
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </>
@@ -305,7 +311,8 @@ export default function MyStudents() {
             ← Back to Students
           </button>
 
-          <div className="bg-white border p-8 mb-6">
+          <div className="bg-white border p-4 sm:p-8 mb-6 max-w-4xl mx-auto">
+
             <h1 className="text-center text-2xl font-bold mb-1">
               INDIAN INSTITUTE OF TECHNOLOGY ROPAR
             </h1>
@@ -315,7 +322,9 @@ export default function MyStudents() {
 
             <h3 className="font-bold mb-2">STUDENT DETAILS</h3>
 
-            <table className="w-full text-sm border">
+            <div className="overflow-x-auto">
+  <table className="w-full text-sm min-w-[600px]">
+
               <tbody>
                 <Row label="Full Name" value={selectedStudent.full_name} />
                 <Row label="Email Address" value={selectedStudent.email} />
@@ -324,12 +333,16 @@ export default function MyStudents() {
                 <Row label="Role" value="Student" />
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="bg-white border p-6">
             <h3 className="font-bold mb-4">ACADEMIC INFORMATION</h3>
 
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+  <table className="w-full text-sm min-w-[600px]">
+
+
               <thead className="bg-gray-100">
                 <tr>
                   <th className="px-3 py-2 text-left">Course Code</th>
@@ -359,6 +372,7 @@ export default function MyStudents() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}
