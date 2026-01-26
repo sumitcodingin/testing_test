@@ -542,7 +542,9 @@ function AdminCourseApprovals() {
             <thead className="bg-gray-100 border-b">
               <tr>
                 <th className="p-4 font-semibold text-gray-600">Course</th>
-                <th className="p-4 font-semibold text-gray-600">Instructor</th>
+                {/* RENAMED/ADDED COLUMNS */}
+                <th className="p-4 font-semibold text-gray-600">Coordinator</th>
+                <th className="p-4 font-semibold text-gray-600">Co-Instructors</th>
                 <th className="p-4 font-semibold text-gray-600">Dept</th>
                 <th className="p-4 font-semibold text-gray-600 text-right">Actions</th>
               </tr>
@@ -554,10 +556,20 @@ function AdminCourseApprovals() {
                     <div className="font-bold text-gray-800">{c.title}</div>
                     <div className="text-xs text-gray-500">{c.course_code}</div>
                   </td>
+                  
+                  {/* Coordinator Data */}
                   <td className="p-4">
-                    <div>{c.instructor?.full_name}</div>
-                    <div className="text-xs text-gray-500">{c.instructor?.email}</div>
+                    <div className="font-medium">{c.coordinator?.full_name}</div>
+                    <div className="text-xs text-gray-500">{c.coordinator?.email}</div>
                   </td>
+
+                  {/* Co-Instructors Data */}
+                  <td className="p-4 text-sm text-gray-600 max-w-xs">
+                     {c.co_instructor_names && c.co_instructor_names.length > 0 
+                        ? c.co_instructor_names.join(", ") 
+                        : <span className="text-gray-400 italic">None</span>}
+                  </td>
+
                   <td className="p-4 text-gray-600">{c.department}</td>
                   <td className="p-4 text-right flex justify-end gap-2">
                     <button 
@@ -583,7 +595,6 @@ function AdminCourseApprovals() {
   );
 }
 
-
 /* =========================================================
    COMPONENT 2: ADMIN COURSE LIST
    ========================================================= */
@@ -594,7 +605,7 @@ function AdminCourseList() {
     dept: "",
     session: "2025-II",
     title: "",
-    instructor: ""
+    instructor: "" // This searches Coordinator Name in backend
   });
 
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -667,7 +678,8 @@ function AdminCourseList() {
           <input name="code" placeholder="Course Code" className="border px-3 py-2 text-sm rounded" value={search.code} onChange={handleChange} />
           <input name="title" placeholder="Course Title" className="border px-3 py-2 text-sm rounded" value={search.title} onChange={handleChange} />
           <input name="dept" placeholder="Department" className="border px-3 py-2 text-sm rounded" value={search.dept} onChange={handleChange} />
-          <input name="instructor" placeholder="Instructor" className="border px-3 py-2 text-sm rounded" value={search.instructor} onChange={handleChange} />
+          {/* UPDATED PLACEHOLDER */}
+          <input name="instructor" placeholder="Coordinator Name" className="border px-3 py-2 text-sm rounded" value={search.instructor} onChange={handleChange} />
           <select name="session" className="border px-3 py-2 text-sm rounded bg-white" value={search.session} onChange={handleChange}>
             <option value="2025-II">2025-II</option>
             <option value="2025-I">2025-I</option>
@@ -685,7 +697,9 @@ function AdminCourseList() {
             <thead className="bg-gray-100 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 font-semibold text-gray-600">Course</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Instructor</th>
+                {/* RENAMED/ADDED COLUMNS */}
+                <th className="px-4 py-3 font-semibold text-gray-600">Coordinator</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">Co-Instructors</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Department</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Session</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Enrolled</th>
@@ -703,7 +717,17 @@ function AdminCourseList() {
                     <p className="font-bold text-gray-800">{c.title}</p>
                     <p className="text-xs text-gray-500">{c.course_code}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{c.instructor?.full_name || "—"}</td>
+                  
+                  {/* Coordinator */}
+                  <td className="px-4 py-3 text-gray-700">{c.coordinator?.full_name || "—"}</td>
+
+                  {/* Co-Instructors */}
+                  <td className="px-4 py-3 text-gray-600 text-xs max-w-[200px]">
+                     {c.co_instructor_names && c.co_instructor_names.length > 0 
+                        ? c.co_instructor_names.join(", ") 
+                        : "—"}
+                  </td>
+
                   <td className="px-4 py-3 text-gray-600">{c.department}</td>
                   <td className="px-4 py-3 text-gray-600">{c.acad_session}</td>
                   <td className="px-4 py-3 text-gray-600 font-medium">
@@ -716,7 +740,6 @@ function AdminCourseList() {
                     >
                       View
                     </button>
-                    {/* DELETE BUTTON FOR ADMIN */}
                     <button
                       onClick={(e) => handleRemoveCourse(e, c.course_id)}
                       className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition"
@@ -735,7 +758,12 @@ function AdminCourseList() {
       {selectedCourse && (
         <Modal onClose={() => setSelectedCourse(null)} title="Course Details">
           <Detail label="Course" value={`${selectedCourse.course_code} – ${selectedCourse.title}`} />
-          <Detail label="Instructor" value={selectedCourse.instructor?.full_name || "—"} />
+          {/* UPDATED MODAL DETAILS */}
+          <Detail label="Coordinator" value={selectedCourse.coordinator?.full_name || "—"} />
+          <Detail 
+            label="Co-Instructors" 
+            value={selectedCourse.co_instructor_names?.length ? selectedCourse.co_instructor_names.join(", ") : "None"} 
+          />
           <Detail label="Department" value={selectedCourse.department} />
           <Detail label="Session" value={selectedCourse.acad_session} />
           <Detail label="Seats" value={`${selectedCourse.enrolled_count}/${selectedCourse.capacity}`} />
@@ -743,33 +771,28 @@ function AdminCourseList() {
         </Modal>
       )}
 
-      {/* Enrollments Modal */}
+      {/* Enrollments Modal (Unchanged) */}
       {showEnrollmentModal && (
         <Modal onClose={() => setShowEnrollmentModal(false)} title="Enrollment List">
-          <div className="mb-4 pb-4 border-b">
-            <p className="font-bold text-lg text-gray-800">{viewingEnrollmentMeta.title}</p>
-            <p className="text-sm text-gray-600">
-              Enrolled: {viewingEnrollmentMeta.enrolledCount} / {viewingEnrollmentMeta.capacity}
-            </p>
-          </div>
-
-          {enrollmentList.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">No enrollments yet.</p>
-          ) : (
-            <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
-              {enrollmentList.map((r, i) => (
-                <li key={i} className="bg-gray-50 p-3 rounded flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-gray-700">{r.student?.full_name || "—"}</p>
-                    <p className="text-xs text-gray-500">{r.student?.department}</p>
-                  </div>
-                  <span className={`font-bold text-xs px-2 py-1 rounded border bg-white ${statusClass(r.status)}`}>
-                    {r.status.replace(/_/g, " ")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+           {/* ... existing enrollment list code ... */}
+           {/* (Included in your provided code, keeping it concise here) */}
+           <div className="mb-4 pb-4 border-b">
+             <p className="font-bold text-lg text-gray-800">{viewingEnrollmentMeta.title}</p>
+             <p className="text-sm text-gray-600">Enrolled: {viewingEnrollmentMeta.enrolledCount} / {viewingEnrollmentMeta.capacity}</p>
+           </div>
+           {enrollmentList.length === 0 ? <p className="text-sm text-gray-500 italic">No enrollments yet.</p> : (
+             <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
+               {enrollmentList.map((r, i) => (
+                 <li key={i} className="bg-gray-50 p-3 rounded flex justify-between items-center">
+                   <div>
+                     <p className="font-bold text-gray-700">{r.student?.full_name || "—"}</p>
+                     <p className="text-xs text-gray-500">{r.student?.department}</p>
+                   </div>
+                   <span className={`font-bold text-xs px-2 py-1 rounded border bg-white ${statusClass(r.status)}`}>{r.status.replace(/_/g, " ")}</span>
+                 </li>
+               ))}
+             </ul>
+           )}
         </Modal>
       )}
     </div>
