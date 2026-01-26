@@ -193,7 +193,8 @@ export default function StudentRecords() {
                 Academic session: {CURRENT_SESSION} &nbsp;|&nbsp;
                 SGPA: {sgpa} &nbsp;|&nbsp;
                 Credits Registered: {registeredCredits} &nbsp;|&nbsp;
-                Earned Credits: {earnedCreditsCurrent}
+                Earned Credits: {earnedCreditsCurrent} &nbsp;|&nbsp;
+                Cumulative Earned Credits: {cumulativeEarnedCredits}
               </div>
 
               <table className="w-full text-sm border-collapse">
