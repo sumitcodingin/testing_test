@@ -124,7 +124,7 @@ node server.js
 npm start
 ```
 
-## 👥 Team Members
+## 👥 Team Members:-
 
 * **Shaurya Anant** - 2023CSB1313
 * **Venkata Praneeth J** - 2023CSB1296
