@@ -179,6 +179,31 @@ exports.updateUserStatus = async (req, res) => {
 };
 
 // ============================
+// NEW: Edit User Name
+// ============================
+exports.updateUserName = async (req, res) => {
+  const { userId, newName } = req.body;
+
+  if (!userId || !newName) {
+    return res.status(400).json({ error: "Missing User ID or Name" });
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ full_name: newName })
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    res.json({ message: "User name updated successfully." });
+  } catch (err) {
+    console.error("UPDATE USER NAME ERROR:", err);
+    res.status(500).json({ error: "Failed to update user name." });
+  }
+};
+
+// ============================
 // 3. Delete User (Remove)
 // ============================
 exports.deleteUser = async (req, res) => {
@@ -273,8 +298,8 @@ exports.toggleCourseRegistration = async (req, res) => {
     // 3. Send Bulk Email
     if (emails.length > 0) {
         const subject = isOpen 
-            ? "📣 Course Registration is NOW OPEN" 
-            : "🔒 Course Registration is CLOSED";
+            ? "謄 Course Registration is NOW OPEN" 
+            : "白 Course Registration is CLOSED";
         
         const message = isOpen
             ? "Dear User,\n\nThe course add/drop window is now OPEN. Students may proceed to register for courses.\n\nRegards,\nAcademic Administration"
@@ -320,8 +345,8 @@ exports.toggleGradeSubmission = async (req, res) => {
     // 3. Send Bulk Email
     if (emails.length > 0) {
         const subject = isOpen 
-            ? "📝 Grade Submission Portal OPEN" 
-            : "🛑 Grade Submission Portal CLOSED";
+            ? "統 Grade Submission Portal OPEN" 
+            : "尅 Grade Submission Portal CLOSED";
         
         const message = isOpen
             ? "Dear Instructor,\n\nThe grade submission portal is now OPEN. You may proceed to award grades to your students.\n\nRegards,\nAcademic Administration"
@@ -368,6 +393,7 @@ exports.getPendingCourses = async (req, res) => {
     res.status(500).json({ error: "Fetch failed." });
   }
 };
+
 // ============================
 // 9. Admin Approve/Reject Course
 // ============================

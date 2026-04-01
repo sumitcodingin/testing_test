@@ -5,6 +5,7 @@ const {
   getUsers, 
   updateUserStatus, 
   deleteUser,
+  updateUserName,
   getSystemSettings,
   toggleCourseRegistration,
   toggleGradeSubmission,
@@ -19,6 +20,7 @@ const {
 router.delete('/reset-enrollments', resetEnrollments);
 router.get('/users', getUsers);            
 router.post('/user-status', updateUserStatus); 
+router.put('/update-user-name', updateUserName); // NEW EDIT ROUTE
 router.post('/delete-user', deleteUser);       
 
 // System Control Routes

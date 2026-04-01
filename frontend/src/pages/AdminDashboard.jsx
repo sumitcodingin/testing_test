@@ -5,9 +5,8 @@ import { Lock, Unlock, Settings } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("PENDING"); // Default to Pending Users
-const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  
   // Use localStorage as per previous fixes
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -19,39 +18,36 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
     <div className="min-h-screen bg-gray-100 font-sans">
       {/* MOBILE TOP BAR */}
-<div className="md:hidden flex items-center justify-between bg-neutral-900 text-white px-4 py-3">
-  <button onClick={() => setSidebarOpen(true)} className="text-2xl">
-  ☰
-</button>
-
-  <span className="font-semibold">Admin Portal</span>
-</div>
+      <div className="md:hidden flex items-center justify-between bg-neutral-900 text-white px-4 py-3">
+        <button onClick={() => setSidebarOpen(true)} className="text-2xl">
+          ☰
+        </button>
+        <span className="font-semibold">Admin Portal</span>
+      </div>
 
       {/* ================= SIDEBAR ================= */}
       <nav
-  className={`
-    fixed top-0 left-0 h-screen w-64 bg-neutral-900 text-neutral-200 shadow-lg
-    flex flex-col justify-between z-50
-    transform transition-transform duration-300
-    ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-    md:translate-x-0
-  `}
->
-
+        className={`
+          fixed top-0 left-0 h-screen w-64 bg-neutral-900 text-neutral-200 shadow-lg
+          flex flex-col justify-between z-50
+          transform transition-transform duration-300
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:translate-x-0
+        `}
+      >
         {/* TOP */}
         <div>
           <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-700">
-  <h1 className="text-xl font-bold tracking-wide text-white">
-    Admin Portal
-  </h1>
-  <button
-    className="md:hidden text-neutral-400 text-xl"
-    onClick={() => setSidebarOpen(false)}
-  >
-    ✕
-  </button>
-</div>
-
+            <h1 className="text-xl font-bold tracking-wide text-white">
+              Admin Portal
+            </h1>
+            <button
+              className="md:hidden text-neutral-400 text-xl"
+              onClick={() => setSidebarOpen(false)}
+            >
+              ✕
+            </button>
+          </div>
 
           <div className="flex flex-col mt-4">
             <div className="px-6 py-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
@@ -143,13 +139,13 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
           </button>
         </div>
       </nav>
-      {sidebarOpen && (
-  <div
-    className="fixed inset-0 bg-black/40 z-40 md:hidden"
-    onClick={() => setSidebarOpen(false)}
-  />
-)}
 
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="md:ml-64 p-6 min-h-screen overflow-y-auto">
@@ -307,6 +303,20 @@ function UserList({ status }) {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Handle Edit User Name
+  const handleEditName = async (user) => {
+    const newName = window.prompt("Enter new name for this user:", user.full_name);
+    if (newName !== null && newName.trim() !== "" && newName.trim() !== user.full_name) {
+      try {
+        await api.put("/admin/update-user-name", { userId: user.user_id, newName: newName.trim() });
+        alert("Name updated successfully!");
+        fetchUsers();
+      } catch (err) {
+        alert("Failed to update user name");
+      }
+    }
+  };
 
   const handleAction = async (userId, action) => {
     if(!window.confirm(`Are you sure you want to ${action} this user?`)) return;
@@ -506,6 +516,9 @@ function UserList({ status }) {
                     </span>
                   </td>
                   <td className="p-4 flex justify-center gap-2">
+                    {/* EDIT BUTTON UNIVERSALLY ADDED HERE */}
+                    <button onClick={() => handleEditName(u)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition">Edit</button>
+
                     {status === 'PENDING' && (
                       <>
                         <button onClick={() => handleAction(u.user_id, 'APPROVE')} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition">Accept</button>
@@ -579,7 +592,6 @@ function AdminCourseApprovals() {
             <thead className="bg-gray-100 border-b">
               <tr>
                 <th className="p-4 font-semibold text-gray-600">Course</th>
-                {/* RENAMED/ADDED COLUMNS */}
                 <th className="p-4 font-semibold text-gray-600">Coordinator</th>
                 <th className="p-4 font-semibold text-gray-600">Co-Instructors</th>
                 <th className="p-4 font-semibold text-gray-600">Dept</th>
@@ -642,7 +654,7 @@ function AdminCourseList() {
     dept: "",
     session: "2025-II",
     title: "",
-    instructor: "" // This searches Coordinator Name in backend
+    instructor: "" 
   });
 
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -715,7 +727,6 @@ function AdminCourseList() {
           <input name="code" placeholder="Course Code" className="border px-3 py-2 text-sm rounded" value={search.code} onChange={handleChange} />
           <input name="title" placeholder="Course Title" className="border px-3 py-2 text-sm rounded" value={search.title} onChange={handleChange} />
           <input name="dept" placeholder="Department" className="border px-3 py-2 text-sm rounded" value={search.dept} onChange={handleChange} />
-          {/* UPDATED PLACEHOLDER */}
           <input name="instructor" placeholder="Coordinator Name" className="border px-3 py-2 text-sm rounded" value={search.instructor} onChange={handleChange} />
           <select name="session" className="border px-3 py-2 text-sm rounded bg-white" value={search.session} onChange={handleChange}>
             <option value="2025-II">2025-II</option>
@@ -734,7 +745,6 @@ function AdminCourseList() {
             <thead className="bg-gray-100 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 font-semibold text-gray-600">Course</th>
-                {/* RENAMED/ADDED COLUMNS */}
                 <th className="px-4 py-3 font-semibold text-gray-600">Coordinator</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Co-Instructors</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Department</th>
@@ -795,7 +805,6 @@ function AdminCourseList() {
       {selectedCourse && (
         <Modal onClose={() => setSelectedCourse(null)} title="Course Details">
           <Detail label="Course" value={`${selectedCourse.course_code} – ${selectedCourse.title}`} />
-          {/* UPDATED MODAL DETAILS */}
           <Detail label="Coordinator" value={selectedCourse.coordinator?.full_name || "—"} />
           <Detail 
             label="Co-Instructors" 
@@ -808,11 +817,9 @@ function AdminCourseList() {
         </Modal>
       )}
 
-      {/* Enrollments Modal (Unchanged) */}
+      {/* Enrollments Modal */}
       {showEnrollmentModal && (
         <Modal onClose={() => setShowEnrollmentModal(false)} title="Enrollment List">
-           {/* ... existing enrollment list code ... */}
-           {/* (Included in your provided code, keeping it concise here) */}
            <div className="mb-4 pb-4 border-b">
              <p className="font-bold text-lg text-gray-800">{viewingEnrollmentMeta.title}</p>
              <p className="text-sm text-gray-600">Enrolled: {viewingEnrollmentMeta.enrolledCount} / {viewingEnrollmentMeta.capacity}</p>
