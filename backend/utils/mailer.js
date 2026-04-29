@@ -1,26 +1,17 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
-/* ============================================================
-   TRANSPORTER CONFIGURATION (Optimized)
-   - host: smtp.gmail.com
-   - family: 4 (Forces IPv4 at socket level)
-   - pool: true (Keeps connection alive for speed)
-============================================================ */
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Use SSL
-  pool: true,   // Reuses open connections
-  maxConnections: 5,
-  maxMessages: 100,
-  family: 4,    // <--- CRITICAL: Forces IPv4 network stack
+  port: 587,          // ✅ Use TLS port (more reliable on Railway)
+  secure: false,      // ✅ MUST be false for port 587
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS, // app password
   },
-  tls: {
-    rejectUnauthorized: false // Helps with some strict firewalls
-  }
+  connectionTimeout: 10000, // ✅ prevents hanging
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+  family: 4, // keep IPv4 (good)
 });
 
 // Verify connection on startup
