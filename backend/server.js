@@ -38,7 +38,15 @@ const app = express();
 // ============================
 // GLOBAL MIDDLEWARES
 // ============================
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://aims-frontend-dusky.vercel.app"
+  ],
+  credentials: true
+}));
+
+app.options('*', cors());
 app.use(express.json());
 
 // ============================
